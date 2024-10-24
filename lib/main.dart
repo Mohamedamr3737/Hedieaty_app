@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import './HomePage.dart';
 import './EventsPage.dart';
 import 'package:hedieaty_app/Giftspage.dart';
+import 'package:hedieaty_app/ProfilePage.dart';
 
 void main() {
   runApp(MyApp());
@@ -128,12 +129,3 @@ class NotificationsPage extends StatelessWidget {
   }
 }
 
-// Dummy Profile Page
-class ProfilePage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('Profile Page Content'),
-    );
-  }
-}

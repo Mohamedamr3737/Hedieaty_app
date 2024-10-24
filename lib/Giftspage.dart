@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'GiftFormPage.dart';
 import 'gift_model.dart';  // Assuming gift model is defined in a separate file
+import 'dart:io';  // For handling image files
 
 class GiftListPage extends StatefulWidget {
   @override
@@ -8,10 +9,11 @@ class GiftListPage extends StatefulWidget {
 }
 
 class _GiftListPageState extends State<GiftListPage> {
+  // Sample list of gifts, with price and imagePath fields
   List<Gift> gifts = [
-    Gift(name: 'Watch', category: 'Accessories', status: 'Available'),
-    Gift(name: 'Smartphone', category: 'Electronics', status: 'Pledged', isPledged: true),
-    Gift(name: 'Shoes', category: 'Footwear', status: 'Available'),
+    Gift(name: 'Watch', category: 'Accessories', status: 'Available', price: 199.99),
+    Gift(name: 'Smartphone', category: 'Electronics', status: 'Pledged', isPledged: true, price: 799.99, imagePath: 'path_to_smartphone_image.jpg'),
+    Gift(name: 'Shoes', category: 'Footwear', status: 'Available', price: 59.99),
   ];
 
   String _sortBy = 'Name'; // Default sorting criteria
@@ -46,8 +48,29 @@ class _GiftListPageState extends State<GiftListPage> {
         itemCount: gifts.length,
         itemBuilder: (context, index) {
           return ListTile(
+            leading: gifts[index].imagePath != null && gifts[index].imagePath!.isNotEmpty
+                ? Container(
+              width: 50,  // Set a fixed width
+              height: 50,  // Set a fixed height
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8.0),  // Optionally, add rounded corners
+                child: Image.file(
+                  File(gifts[index].imagePath!),  // Load the image
+                  fit: BoxFit.cover,  // Ensure the image fits within the box
+                ),
+              ),
+            )
+                : Icon(Icons.card_giftcard, size: 50),  // Default icon if no image
+
             title: Text(gifts[index].name),
-            subtitle: Text('Category: ${gifts[index].category}, Status: ${gifts[index].status}'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Category: ${gifts[index].category}'),
+                Text('Status: ${gifts[index].status}'),
+                Text('Price: \$${gifts[index].price.toStringAsFixed(2)}'),  // Display price with 2 decimal places
+              ],
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
