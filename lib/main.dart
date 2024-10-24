@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import './HomePage.dart';
 import './EventsPage.dart';
+import 'package:hedieaty_app/Giftspage.dart';
 
 void main() {
   runApp(MyApp());
@@ -31,7 +32,7 @@ class _MainScreenState extends State<MainScreen> {
   // List of widgets representing each page
   final List<Widget> _pages = [
     HomePage(),
-    GiftListsPage(),
+    GiftListPage(),
     EventListPage(),
     NotificationsPage(),
     ProfilePage(),
@@ -116,16 +117,6 @@ class RoundedTopNavClipper extends CustomClipper<Path> {
   }
 }
 
-
-// Dummy Gift Lists Page
-class GiftListsPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('Gift Lists Page Content'),
-    );
-  }
-}
 
 // Dummy Notifications Page
 class NotificationsPage extends StatelessWidget {
