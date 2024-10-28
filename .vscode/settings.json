@@ -1,0 +1,9 @@
+{
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#2C3002",
+        "titleBar.activeBackground": "#3D4302",
+        "titleBar.activeForeground": "#FAFDD3"
+    },
+    "FSharp.suggestGitignore": false,
+    "java.configuration.updateBuildConfiguration": "interactive"
+}

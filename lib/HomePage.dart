@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hedieaty_app/FriendEventListPage.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -6,12 +7,66 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
-  // Placeholder list of friends
-  final List<Map<String, String>> friends = [
-    {"name": "Alice", "events": "Upcoming Events: 1", "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQvCiFg3WKJJD9wl2z94g3-1oEAJ-Baul_GCw&s"},
-    {"name": "Bob", "events": "No Upcoming Events", "image": "https://img.freepik.com/free-photo/curly-man-with-broad-smile-shows-perfect-teeth-being-amused-by-interesting-talk-has-bushy-curly-dark-hair-stands-indoor-against-white-blank-wall_273609-17092.jpg"},
-    // Add more friends here
+  final List<Map<String, dynamic>> friends = [
+    {
+      "name": "Alice",
+      "events": [
+        {
+          "name": "Birthday Party",
+          "gifts": [
+            {
+              "name": "Watch",
+              "category": "Accessories",
+              "status": "Available",
+              "price": 199.99,
+              "isPledged": false,
+              "imagePath": "path_to_image.jpg"
+            },
+            {
+              "name": "Bag",
+              "category": "Accessories",
+              "status": "Available",
+              "price": 59.99,
+              "isPledged": false,
+              "imagePath": "path_to_image.jpg"
+            }
+          ]
+        },
+        {
+          "name": "Graduation",
+          "gifts": [
+            {
+              "name": "Laptop",
+              "category": "Electronics",
+              "status": "Available",
+              "price": 799.99,
+              "isPledged": false,
+              "imagePath": "path_to_image.jpg"
+            }
+          ]
+        }
+      ],
+      "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQvCiFg3WKJJD9wl2z94g3-1oEAJ-Baul_GCw&s"
+    },
+    {
+      "name": "Bob",
+      "events": [
+        {
+          "name": "Conference",
+          "gifts": [
+            {
+              "name": "Notebook",
+              "category": "Stationery",
+              "status": "Available",
+              "price": 9.99,
+              "isPledged": false,
+              "imagePath": "path_to_image.jpg"
+            }
+          ]
+        }
+      ],
+      "image": "https://img.freepik.com/free-photo/curly-man-with-broad-smile-shows-perfect-teeth-being-amused-by-interesting-talk-has-bushy-curly-dark-hair-stands-indoor-against-white-blank-wall_273609-17092.jpg"
+    },
   ];
 
   @override
@@ -43,15 +98,23 @@ class _HomePageState extends State<HomePage> {
             child: ListView.builder(
               itemCount: friends.length,
               itemBuilder: (context, index) {
+                final friend = friends[index];
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: NetworkImage(friends[index]['image']!), // Load image from URL
+                    backgroundImage: NetworkImage(friend['image']),
                   ),
-                  title: Text(friends[index]['name']!),
-                  subtitle: Text(friends[index]['events']!),
+                  title: Text(friend['name']),
+                  subtitle: Text(friend['events'].length > 0
+                      ? 'Upcoming Events: ${friend['events'].length}'
+                      : 'No Upcoming Events'),
                   trailing: Icon(Icons.arrow_forward_ios),
                   onTap: () {
-                    // Navigate to friend's gift list details page
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FriendEventListPage(friend: friend),
+                      ),
+                    );
                   },
                 );
               },
@@ -65,9 +128,6 @@ class _HomePageState extends State<HomePage> {
         },
         child: Icon(Icons.person_add),
       ),
-
     );
   }
 }
-
-
