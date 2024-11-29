@@ -50,37 +50,66 @@ class _EventGiftListPageState extends State<EventGiftListPage> {
         itemCount: gifts.length,
         itemBuilder: (context, index) {
           final gift = gifts[index];
-          return ListTile(
-            leading: gift['imagePath'] != null && gift['imagePath'].isNotEmpty
-                ? Container(
-              width: 50,
-              height: 50,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: Image.file(
-                  File(gift['imagePath']),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            )
-                : Icon(Icons.card_giftcard, size: 50),
-
-            title: Text(gift['name']),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Category: ${gift['category']}'),
-                Text('Status: ${gift['status']}'),
-                Text('Price: \$${gift['price'].toStringAsFixed(2)}'),
-              ],
+          return Card(
+            margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
-            trailing: ElevatedButton(
-              onPressed: gift['isPledged'] ? null : () => _pledgeGift(index),
-              child: Text(gift['isPledged'] ? 'Pledged' : 'Pledge'),
-            ),
-            tileColor: gift['isPledged']
+            color: gift['isPledged']
                 ? Colors.greenAccent.withOpacity(0.2)
-                : null,
+                : Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Display image or icon
+                  gift['imagePath'] != null && gift['imagePath'].isNotEmpty
+                      ? Container(
+                    width: 50,
+                    height: 50,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: Icon(Icons.card_giftcard, size: 50)
+                      // Image.network(
+                      //   gift['imagePath'],
+                      //   fit: BoxFit.cover,
+                      // ),
+                    ),
+                  )
+                      : Icon(Icons.card_giftcard, size: 50),
+                  SizedBox(width: 16),
+
+                  // Display gift details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          gift['name'],
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+
+                        Text('Category: ${gift['category']}'),
+                        Text('Status: ${gift['status']}'),
+                        Text('Price: \$${gift['price'].toStringAsFixed(2)}'),
+                      ],
+                    ),
+                  ),
+
+                  // Pledge button
+                  ElevatedButton(
+                    onPressed: gift['isPledged'] ? null : () => _pledgeGift(index),
+                    child: Text(gift['isPledged'] ? 'Pledged' : 'Pledge'),
+                  ),
+                ],
+              ),
+            ),
           );
         },
       ),

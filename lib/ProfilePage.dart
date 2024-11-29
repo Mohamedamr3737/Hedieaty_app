@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hedieaty_app/MyPledgedGifts.dart';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -7,8 +8,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   // Dummy user information
-  String _name = "John Doe";
-  String _email = "johndoe@example.com";
+  String _name = "Mohamed Amr";
+  String _email = "mohamedamr@example.com";
   bool _notificationsEnabled = true;
 
   // Dummy data for created events and gifts
@@ -40,20 +41,17 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // User Profile Section
-            Text(
-              "Profile Information",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            _buildUserInfoSection(),
+            // Profile Photo and User Information Section
+            Center(child: _buildProfilePhoto()),
+            SizedBox(height: 16),
+            Center(child: _buildUserInfoSection()),
 
             // Notification Settings
-            SizedBox(height: 20),
+            SizedBox(height: 30),
             _buildNotificationSettings(),
 
             // User's Created Events and Gifts
-            SizedBox(height: 20),
+            SizedBox(height: 30),
             Text(
               "Created Events and Gifts",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -62,7 +60,7 @@ class _ProfilePageState extends State<ProfilePage> {
             _buildCreatedEvents(),
 
             // Link to My Pledged Gifts Page
-            SizedBox(height: 20),
+            SizedBox(height: 30),
             _buildPledgedGiftsLink(),
           ],
         ),
@@ -70,19 +68,44 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // Build the profile photo section
+  Widget _buildProfilePhoto() {
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 50,
+          backgroundImage: NetworkImage('https://cdn.create.vista.com/api/media/small/133960224/stock-photo-smiling-young-man'), // Replace with user's profile image URL
+        ),
+        SizedBox(height: 10),
+        Text(
+          _name,
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          _email,
+          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+        ),
+      ],
+    );
+  }
+
   // Build the user info section
   Widget _buildUserInfoSection() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text("Name: $_name"),
-        Text("Email: $_email"),
         SizedBox(height: 10),
         ElevatedButton(
           onPressed: () {
             _updatePersonalInfo();
           },
           child: Text('Edit Personal Information'),
+          style: ElevatedButton.styleFrom(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
         ),
       ],
     );
@@ -95,7 +118,7 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         Text(
           "Notification Settings",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         SwitchListTile(
           title: Text("Enable Notifications"),
@@ -115,15 +138,24 @@ class _ProfilePageState extends State<ProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: _createdEvents.map((eventData) {
-        return ExpansionTile(
-          title: Text(eventData["event"]),
-          children: (eventData["gifts"] as List<Map<String, dynamic>>)
-              .map((gift) {
-            return ListTile(
-              title: Text(gift["name"]),
-              subtitle: Text("Status: ${gift["status"]}"),
-            );
-          }).toList(),
+        return Card(
+          margin: EdgeInsets.symmetric(vertical: 8.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          elevation: 2,
+          child: ExpansionTile(
+            title: Text(
+              eventData["event"],
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            children: (eventData["gifts"] as List<Map<String, dynamic>>).map((gift) {
+              return ListTile(
+                title: Text(gift["name"]),
+                subtitle: Text("Status: ${gift["status"]}"),
+              );
+            }).toList(),
+          ),
         );
       }).toList(),
     );
@@ -138,16 +170,22 @@ class _ProfilePageState extends State<ProfilePage> {
           MaterialPageRoute(builder: (context) => MyPledgedGiftsPage()),
         );
       },
-      child: Text(
-        "Go to My Pledged Gifts",
-        style: TextStyle(fontSize: 18, color: Colors.blue, decoration: TextDecoration.underline),
+      child: Center(
+        child: Text(
+          "Go to My Pledged Gifts",
+          style: TextStyle(
+            fontSize: 18,
+            color: Colors.blue,
+            decoration: TextDecoration.underline,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
 
   // Dummy method to update personal info
   void _updatePersonalInfo() {
-    // This could navigate to another page or show a dialog to edit user info
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -184,32 +222,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ],
         );
       },
-    );
-  }
-}
-
-// Dummy "My Pledged Gifts" Page
-class MyPledgedGiftsPage extends StatelessWidget {
-  final List<Map<String, dynamic>> _pledgedGifts = [
-    {"name": "Shoes", "event": "Birthday Party"},
-    {"name": "Smartphone", "event": "Wedding Anniversary"}
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('My Pledged Gifts'),
-      ),
-      body: ListView.builder(
-        itemCount: _pledgedGifts.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(_pledgedGifts[index]['name']),
-            subtitle: Text("Event: ${_pledgedGifts[index]['event']}"),
-          );
-        },
-      ),
     );
   }
 }

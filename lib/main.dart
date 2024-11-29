@@ -3,6 +3,7 @@ import './HomePage.dart';
 import './EventsPage.dart';
 import 'package:hedieaty_app/Giftspage.dart';
 import 'package:hedieaty_app/ProfilePage.dart';
+import 'package:hedieaty_app/NotificationsPage.dart';
 
 void main() {
   runApp(MyApp());
@@ -98,7 +99,7 @@ class RoundedTopNavClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     var path = Path();
-    double roundnessFactor = 30.0; // Adjust this to control roundness
+    double roundnessFactor = 30.0;
 
     // Start at the top-left of the widget
     path.moveTo(0, roundnessFactor);
@@ -114,18 +115,9 @@ class RoundedTopNavClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) {
-    return false; // Redraw only when necessary
+    return false;
   }
 }
 
 
-// Dummy Notifications Page
-class NotificationsPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('Notifications Page Content'),
-    );
-  }
-}
 

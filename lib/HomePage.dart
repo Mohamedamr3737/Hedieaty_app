@@ -9,7 +9,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final List<Map<String, dynamic>> friends = [
     {
-      "name": "Alice",
+      "name": "Amr",
       "events": [
         {
           "name": "Birthday Party",
@@ -46,10 +46,10 @@ class _HomePageState extends State<HomePage> {
           ]
         }
       ],
-      "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQvCiFg3WKJJD9wl2z94g3-1oEAJ-Baul_GCw&s"
+      "image": "https://img.freepik.com/free-photo/stylish-handsome-indian-man-tshirt-pastel-wall_496169-1571.jpg"
     },
     {
-      "name": "Bob",
+      "name": "Mohamed",
       "events": [
         {
           "name": "Conference",
@@ -99,23 +99,62 @@ class _HomePageState extends State<HomePage> {
               itemCount: friends.length,
               itemBuilder: (context, index) {
                 final friend = friends[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: NetworkImage(friend['image']),
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  title: Text(friend['name']),
-                  subtitle: Text(friend['events'].length > 0
-                      ? 'Upcoming Events: ${friend['events'].length}'
-                      : 'No Upcoming Events'),
-                  trailing: Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => FriendEventListPage(friend: friend),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FriendEventListPage(friend: friend),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          // Friend Avatar
+                          CircleAvatar(
+                            backgroundImage: NetworkImage(friend['image']),
+                            radius: 25,
+                          ),
+                          SizedBox(width: 16),
+
+                          // Friend Details
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  friend['name'],
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  friend['events'].length > 0
+                                      ? 'Upcoming Events: ${friend['events'].length}'
+                                      : 'No Upcoming Events',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Trailing Arrow Icon
+                          Icon(Icons.arrow_forward_ios),
+                        ],
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 );
               },
             ),

@@ -12,8 +12,10 @@ class _GiftListPageState extends State<GiftListPage> {
   // Sample list of gifts, with price and imagePath fields
   List<Gift> gifts = [
     Gift(name: 'Watch', category: 'Accessories', status: 'Available', price: 199.99),
-    Gift(name: 'Smartphone', category: 'Electronics', status: 'Pledged', isPledged: true, price: 799.99, imagePath: 'path_to_smartphone_image.jpg'),
+    Gift(name: 'Smartphone', category: 'Electronics', status: 'Pledged', isPledged: true, price: 799.99, imagePath: 'https://media.wired.com/photos/593284aeaef9a462de98365f/master/w_1600,c_limit/2014-09-23-iphone6-gallery-1.jpg'),
     Gift(name: 'Shoes', category: 'Footwear', status: 'Available', price: 59.99),
+    Gift(name: 'Shoes', category: 'Footwear', status: 'Available', price: 59.99),
+
   ];
 
   String _sortBy = 'Name'; // Default sorting criteria
@@ -47,58 +49,83 @@ class _GiftListPageState extends State<GiftListPage> {
       body: ListView.builder(
         itemCount: gifts.length,
         itemBuilder: (context, index) {
-          return ListTile(
-            leading: gifts[index].imagePath != null && gifts[index].imagePath!.isNotEmpty
-                ? Container(
-              width: 50,  // Set a fixed width
-              height: 50,  // Set a fixed height
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),  // Optionally, add rounded corners
-                child: Image.file(
-                  File(gifts[index].imagePath!),  // Load the image
-                  fit: BoxFit.cover,  // Ensure the image fits within the box
-                ),
-              ),
-            )
-                : Icon(Icons.card_giftcard, size: 50),  // Default icon if no image
+          return Card(
+            margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            color: gifts[index].isPledged
+                ? Colors.white12
+                : Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image and Gift Name
+                  Row(
+                    children: [
+                      gifts[index].imagePath != null && gifts[index].imagePath!.isNotEmpty
+                          ? Container(
+                        width: 50,
+                        height: 50,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8.0),
+                          child: Image.network(
+                            gifts[index].imagePath!,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      )
+                          : Icon(Icons.card_giftcard, size: 50),  // Default icon if no image
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          gifts[index].name,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10),
 
-            title: Text(gifts[index].name),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Category: ${gifts[index].category}'),
-                Text('Status: ${gifts[index].status}'),
-                Text('Price: \$${gifts[index].price.toStringAsFixed(2)}'),  // Display price with 2 decimal places
-              ],
+                  // Gift Details
+                  Text('Category: ${gifts[index].category}'),
+                  Text('Status: ${gifts[index].status}'),
+                  Text('Price: \$${gifts[index].price.toStringAsFixed(2)}'),
+
+
+                  // Edit and Delete Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: gifts[index].isPledged? Icon(Icons.lock, color: Colors.blue):Icon(Icons.edit, color: Colors.blue),
+                        onPressed: gifts[index].isPledged
+                            ? null // Disable editing if the gift is pledged
+                            : () {
+                          _editGift(index);
+                        },
+                      ),
+                      IconButton(
+                        icon:gifts[index].isPledged? Icon(Icons.lock, color: Colors.blue): Icon(Icons.delete, color: Colors.red),
+                        onPressed: gifts[index].isPledged
+                            ? null // Disable deleting if the gift is pledged
+                            : () {
+                          gifts.removeAt(index);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.edit),
-                  onPressed: gifts[index].isPledged
-                      ? null // Disable editing if the gift is pledged
-                      : () {
-                    _editGift(index);
-                  },
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete),
-                  onPressed: gifts[index].isPledged
-                      ? null // Disable deleting if the gift is pledged
-                      : () {
-                    setState(() {
-                      gifts.removeAt(index); // Delete gift
-                    });
-                  },
-                ),
-              ],
-            ),
-            tileColor: gifts[index].isPledged
-                ? Colors.greenAccent.withOpacity(0.2) // Color for pledged gifts
-                : null, // Default color for non-pledged gifts
           );
-        },
+          },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addNewGift,
