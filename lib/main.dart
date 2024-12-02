@@ -1,11 +1,16 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import './HomePage.dart';
 import './EventsPage.dart';
 import 'package:hedieaty_app/Giftspage.dart';
 import 'package:hedieaty_app/ProfilePage.dart';
 import 'package:hedieaty_app/NotificationsPage.dart';
+import 'package:hedieaty_app/LoginPage.dart';
 
-void main() {
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Initialize Firebase
   runApp(MyApp());
 }
 
@@ -18,7 +23,12 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MainScreen(), // Set MainScreen as the starting point
+      // home: MainScreen(), // Set MainScreen as the starting point
+    initialRoute: '/',
+    routes: {
+      '/': (context) => LoginPage(),
+      '/home': (context) => MainScreen(),
+    }
     );
   }
 }

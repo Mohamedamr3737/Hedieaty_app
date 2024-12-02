@@ -31,8 +31,23 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Firebase Core
+  firebase_core: ^3.8.0
+
+  # Firebase Authentication
+  firebase_auth: ^5.3.3
+
+  # Firestore
+  cloud_firestore: ^5.5.0
+
+  # SQLite for local storage
+  sqflite: ^2.2.9+1
+
+  # Image Picker
   image_picker: ^1.1.2
-  intl: ^0.18.0
+
+  # Internationalization
+  intl: ^0.20.1
 
 
 
