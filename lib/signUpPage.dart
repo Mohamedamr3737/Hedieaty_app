@@ -5,6 +5,7 @@ class SignupPage extends StatelessWidget {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _mobileController= TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _repasswordController = TextEditingController();
   final TextEditingController _preferencesController = TextEditingController();
@@ -55,6 +56,21 @@ class SignupPage extends StatelessWidget {
                 },
               ),
               SizedBox(height: 16),
+
+              TextFormField(
+                controller: _mobileController,
+                decoration: InputDecoration(
+                  labelText: 'mobile',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value){
+                  if(value == null || value.length<11){
+                    return 'Please write correct mobile number';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16,),
 
               // Password Field
               TextFormField(
@@ -108,6 +124,7 @@ class SignupPage extends StatelessWidget {
                       final user = await _userController.signUpUser(
                         name: _nameController.text,
                         email: _emailController.text,
+                        mobile: _mobileController.text,
                         password: _passwordController.text,
                         repassword: _repasswordController.text,
                         preferences: {

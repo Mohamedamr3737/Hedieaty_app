@@ -5,6 +5,7 @@ class UserController {
   Future<UserModel> signUpUser({
     required String name,
     required String email,
+    required String mobile,
     required String password,
     required String repassword,
     required Map<String, dynamic> preferences,
@@ -17,6 +18,7 @@ class UserController {
       return await UserModel.signUpWithFirebase(
         name: name,
         email: email,
+        mobile: mobile,
         password: password,
         preferences: preferences,
       );

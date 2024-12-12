@@ -3,12 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../database/database_helper.dart';
 import 'package:sqflite/sqflite.dart';
-
+import 'package:hedieaty_app/controllers/Session_controller.dart';
 class UserModel {
+
   int? id; // Auto-incremented primary key in SQLite
   String uid; // Firebase UID
   String name;
   String email;
+  String mobile;
   String preferences; // JSON string for user preferences
 
   UserModel({
@@ -16,6 +18,7 @@ class UserModel {
     required this.uid,
     required this.name,
     required this.email,
+    required this.mobile,
     this.preferences = '',
   });
 
@@ -25,6 +28,7 @@ class UserModel {
       'id': id,
       'uid': uid,
       'name': name,
+      'mobile':mobile,
       'email': email,
       'preferences': preferences,
     };
@@ -36,6 +40,7 @@ class UserModel {
       id: map['id'],
       uid: map['uid'],
       name: map['name'],
+      mobile: map['mobile'],
       email: map['email'],
       preferences: map['preferences'] ?? '',
     );
@@ -58,6 +63,7 @@ class UserModel {
       await firestore.collection('users').doc(user.uid).set({
         'name': user.name,
         'email': user.email,
+        'mobile':user.mobile,
         'preferences': user.getPreferences(),
       });
     } catch (e) {
@@ -87,6 +93,7 @@ class UserModel {
   static Future<UserModel> signUpWithFirebase({
     required String name,
     required String email,
+    required String mobile,
     required String password,
     required Map<String, dynamic> preferences,
   }) async {
@@ -112,6 +119,7 @@ class UserModel {
         uid: firebaseUser.uid,
         name: name,
         email: email,
+        mobile: mobile,
       );
       user.setPreferences(preferences);
 
@@ -154,6 +162,7 @@ class UserModel {
 
       // Retrieve user data from Firestore
       final userData = await FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid).get();
+      await SecureSessionManager.saveUserId(firebaseUser.uid);
 
       if (!userData.exists) {
         throw Exception('User data not found in Firestore.');
@@ -164,15 +173,64 @@ class UserModel {
         uid: firebaseUser.uid,
         name: data['name'] ?? '',
         email: data['email'] ?? email,
+        mobile: data['mobile'] ?? '',
         preferences: jsonEncode(data['preferences'] ?? {}),
       );
 
       print('User data retrieved successfully: ${user.toMap()}');
+
+      // Check if the user already exists in SQLite
+      final db = await DatabaseHelper().database;
+      final result = await db.query(
+        'Users',
+        where: 'uid = ?',
+        whereArgs: [user.uid],
+      );
+
+      if (result.isEmpty) {
+        // Save the user to SQLite if not found
+        print('User not found in SQLite. Saving user...');
+        await saveToSQLite(user);
+
+        print('User saved to SQLite successfully.');
+      } else {
+        print('User already exists in SQLite.');
+      }
+
       return user;
     } catch (e) {
       print('Error in loginWithFirebase: $e');
       throw Exception('Error logging in with Firebase: $e');
     }
   }
+
+  // Function to get the current user UID from SQLite
+  static Future<String?> getCurrentUserId() async {
+    try {
+      final db = await DatabaseHelper().database;
+
+      // Query the Users table to get the current user
+      // Assuming you have a 'current_user' flag or a similar mechanism
+      final List<Map<String, dynamic>> result = await db.query(
+        'Users',
+        where: 'is_logged_in = ?', // Adjust the condition as per your schema
+        whereArgs: [1], // Assuming 1 indicates the currently logged-in user
+        limit: 1,
+      );
+
+      if (result.isNotEmpty) {
+        // Extract and return the UID of the current user
+        return result.first['uid'] as String?;
+      } else {
+        // No user found
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching current user UID: $e');
+      return null;
+    }
+  }
+
+
 
 }

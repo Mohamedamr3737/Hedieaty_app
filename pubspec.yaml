@@ -49,6 +49,10 @@ dependencies:
   # Internationalization
   intl: ^0.20.1
 
+#  shared_preferences: ^2.3.3
+  flutter_secure_storage: ^9.2.2
+
+
 
 
 

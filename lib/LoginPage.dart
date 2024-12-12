@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import './controllers/user_controller.dart';
 import 'signUpPage.dart';
-class LoginPage extends StatelessWidget {
+
+class LoginPage extends StatefulWidget {
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   final UserController _userController = UserController();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -56,8 +63,14 @@ class LoginPage extends StatelessWidget {
 
               // Login Button
               ElevatedButton(
-                onPressed: () async {
+                onPressed: _isLoading
+                    ? null // Disable button while loading
+                    : () async {
                   if (_formKey.currentState!.validate()) {
+                    setState(() {
+                      _isLoading = true; // Start loading
+                    });
+
                     try {
                       final user = await _userController.loginUser(
                         email: _emailController.text,
@@ -73,11 +86,31 @@ class LoginPage extends StatelessWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text("Wrong Email or Password")),
                       );
+                    } finally {
+                      setState(() {
+                        _isLoading = false; // Stop loading
+                      });
                     }
                   }
                 },
-                child: Text('Login'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size(double.infinity, 50), // Full-width button
+                ),
+                child: _isLoading
+                    ? SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.0,
+                  ),
+                )
+                    : Text('Login'),
               ),
+
+              SizedBox(height: 16),
+
+              // Sign Up Link
               TextButton(
                 onPressed: () {
                   Navigator.push(
