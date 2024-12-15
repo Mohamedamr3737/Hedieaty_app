@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:hedieaty_app/models/user_model.dart';
 import 'package:hedieaty_app/models/events_model.dart';
 import 'package:hedieaty_app/controllers/event_controller.dart';
 import 'package:hedieaty_app/controllers/Session_controller.dart';
 import 'package:hedieaty_app/LoginPage.dart';
+import 'package:collection/collection.dart'; // For firstWhereOrNull
+
 class EventListPage extends StatefulWidget {
   @override
   _EventListPageState createState() => _EventListPageState();
@@ -22,16 +23,13 @@ class _EventListPageState extends State<EventListPage> {
 
   void _loadEvents() async {
     final String? userId = await SecureSessionManager.getUserId();
-    print(":::::::::::::::::::::::::::::::::::::::::::::::::::00");
-    print(userId);
     if (userId != null) {
-      final fetchedEvents = await _eventController.fetchAllEvents(userId);
+      final allEvents = await _eventController.fetchEvents(userId);
       setState(() {
-        events = fetchedEvents;
+        events = allEvents;
         _sortEvents();
       });
     } else {
-      // Redirect to login if no user ID found
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginPage()),
@@ -39,9 +37,8 @@ class _EventListPageState extends State<EventListPage> {
     }
   }
 
-
-  void _addEvent(Event event) async {
-    await _eventController.addEvent(event);
+  void _addEvent(Event event, {int? published}) async {
+    await _eventController.addEvent(event,published: published);
     _loadEvents();
   }
 
@@ -50,8 +47,14 @@ class _EventListPageState extends State<EventListPage> {
     _loadEvents();
   }
 
-  void _deleteEvent(int id) async {
-    await _eventController.deleteEvent(id);
+  void _deleteEvent(int id,{String? firestoreId}) async {
+    if(firestoreId!=null){
+      print(firestoreId);
+      await _eventController.deleteEvent(id, firestoreId: firestoreId);
+
+    }else{
+      await _eventController.deleteEvent(id);
+    }
     _loadEvents();
   }
 
@@ -87,69 +90,84 @@ class _EventListPageState extends State<EventListPage> {
     final descriptionController = TextEditingController(text: event?.description ?? '');
     final dateController = TextEditingController(
         text: event != null ? event.date.toIso8601String().split('T')[0] : '');
+    bool isPublished = event?.published ?? false;
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(event == null ? 'Add Event' : 'Edit Event'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: 'Event Name'),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(event == null ? 'Add Event' : 'Edit Event'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(labelText: 'Event Name'),
+                    ),
+                    TextField(
+                      controller: categoryController,
+                      decoration: InputDecoration(labelText: 'Category'),
+                    ),
+                    TextField(
+                      controller: locationController,
+                      decoration: InputDecoration(labelText: 'Location'),
+                    ),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(labelText: 'Description'),
+                    ),
+                    TextField(
+                      controller: dateController,
+                      decoration: InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
+                      keyboardType: TextInputType.datetime,
+                    ),
+                    SwitchListTile(
+                      title: Text('Publish Event'),
+                      value: isPublished,
+                      onChanged: (value) {
+                        setState(() {
+                          isPublished = value;
+                        });
+                      },
+                    ),
+                  ],
                 ),
-                TextField(
-                  controller: categoryController,
-                  decoration: InputDecoration(labelText: 'Category'),
+              ),
+              actions: [
+                TextButton(
+                  child: Text('Cancel'),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                TextField(
-                  controller: locationController,
-                  decoration: InputDecoration(labelText: 'Location'),
-                ),
-                TextField(
-                  controller: descriptionController,
-                  decoration: InputDecoration(labelText: 'Description'),
-                ),
-                TextField(
-                  controller: dateController,
-                  decoration: InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
-                  keyboardType: TextInputType.datetime,
+                TextButton(
+                  child: Text('Save'),
+                  onPressed: () async {
+                    final updatedEvent = Event(
+                      id: event?.id,
+                      name: nameController.text,
+                      category: categoryController.text,
+                      location: locationController.text,
+                      description: descriptionController.text,
+                      date: DateTime.parse(dateController.text),
+                      userId: await SecureSessionManager.getUserId() ?? 'unknown_user',
+                      published: isPublished,
+                      firestoreId: event?.firestoreId,
+                    );
+
+                    if (updatedEvent.id == null) {
+                      _addEvent(updatedEvent, published: updatedEvent.published?1:0);
+                    } else {
+                      _updateEvent(updatedEvent);
+                    }
+
+                    Navigator.pop(context);
+                  },
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () => Navigator.pop(context),
-            ),
-            TextButton(
-              child: Text('Save'),
-              onPressed: () {
-                final newEvent = Event(
-                  id: event?.id,
-                  name: nameController.text,
-                  category: categoryController.text,
-                  location: locationController.text,
-                  description: descriptionController.text,
-                  date: DateTime.parse(dateController.text),
-                  userId: event?.userId ?? 1, // Replace with dynamic user ID
-                  published: event?.published ?? false,
-                );
-
-                if (event == null) {
-                  _addEvent(newEvent);
-                } else {
-                  _updateEvent(newEvent);
-                }
-
-                Navigator.pop(context);
-              },
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -181,7 +199,7 @@ class _EventListPageState extends State<EventListPage> {
         ],
       ),
       body: events.isEmpty
-          ? Center(child: CircularProgressIndicator())
+          ? Center(child: Text("No events to show"))
           : ListView.builder(
         itemCount: events.length,
         itemBuilder: (context, index) {
@@ -197,7 +215,6 @@ class _EventListPageState extends State<EventListPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Event Details
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,8 +228,11 @@ class _EventListPageState extends State<EventListPage> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Category: ${events[index].category}, Status: $status',
-                          style: TextStyle(color: Colors.grey[600]),
+                          'Category: ${events[index].category}, Status: ${events[index].published ? 'Live' : 'Offline'}',
+                          style: TextStyle(
+                            color: events[index].published ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         SizedBox(height: 4),
                         Text(
@@ -222,11 +242,27 @@ class _EventListPageState extends State<EventListPage> {
                       ],
                     ),
                   ),
-
-                  // Edit and Delete Icons
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      IconButton(
+                        icon: Icon(Icons.cloud_upload, color: Colors.blue),
+                        onPressed: () async {
+                          try {
+                            await _eventController.publishEventToFirestore(events[index]);
+                            setState(() {
+                              events[index].published = true; // Update local state
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Event published successfully!')),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to publish event: $e')),
+                            );
+                          }
+                        },
+                      ),
                       IconButton(
                         icon: Icon(Icons.edit, color: Colors.blue),
                         onPressed: () {
@@ -236,7 +272,7 @@ class _EventListPageState extends State<EventListPage> {
                       IconButton(
                         icon: Icon(Icons.delete, color: Colors.red),
                         onPressed: () {
-                          _deleteEvent(events[index].id!);
+                          _deleteEvent(events[index].id!,firestoreId: events[index].firestoreId);
                         },
                       ),
                     ],

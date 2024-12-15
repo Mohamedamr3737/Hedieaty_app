@@ -6,7 +6,6 @@ import 'package:sqflite/sqflite.dart';
 import 'package:hedieaty_app/controllers/Session_controller.dart';
 class UserModel {
 
-  int? id; // Auto-incremented primary key in SQLite
   String uid; // Firebase UID
   String name;
   String email;
@@ -14,7 +13,6 @@ class UserModel {
   String preferences; // JSON string for user preferences
 
   UserModel({
-    this.id,
     required this.uid,
     required this.name,
     required this.email,
@@ -25,7 +23,6 @@ class UserModel {
   // Convert UserModel to a Map for SQLite
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'uid': uid,
       'name': name,
       'mobile':mobile,
@@ -37,7 +34,6 @@ class UserModel {
   // Create UserModel from a Map fetched from SQLite
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      id: map['id'],
       uid: map['uid'],
       name: map['name'],
       mobile: map['mobile'],

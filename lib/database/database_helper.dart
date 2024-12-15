@@ -75,8 +75,7 @@ class DatabaseHelper {
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
     CREATE TABLE Users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      uid TEXT NULL,
+      uid TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       mobile TEXT NOT NULL UNIQUE,
@@ -93,8 +92,9 @@ class DatabaseHelper {
       description TEXT,
       category TEXT,
       published INTEGER NOT NULL CHECK (published IN (0, 1)),
-      user_id INTEGER NOT NULL,
-      FOREIGN KEY (user_id) REFERENCES Users (id) ON DELETE CASCADE
+      user_id text NOT NULL,
+      firestore_id TEXT,
+      FOREIGN KEY (user_id) REFERENCES Users (uid) ON DELETE CASCADE
     );
   ''');
 
