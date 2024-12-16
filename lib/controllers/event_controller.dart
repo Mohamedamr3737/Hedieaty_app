@@ -1,6 +1,8 @@
 import 'package:hedieaty_app/models/events_model.dart';
 
 class EventController {
+
+
   Future<List<Event>> fetchAllEvents(String? userId) async {
     return await Event.fetchEventsForUser(userId);
   }
@@ -20,11 +22,6 @@ class EventController {
       await Event.unpublishEventFromFirestore(event.firestoreId);
     }
   }
-
-
-
-
-
 
   Future<int> deleteEvent(int id,{String? firestoreId}) async {
     return await Event.deleteEvent(id,firestoreId: firestoreId);

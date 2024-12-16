@@ -4,6 +4,7 @@ import 'package:hedieaty_app/controllers/event_controller.dart';
 import 'package:hedieaty_app/controllers/Session_controller.dart';
 import 'package:hedieaty_app/LoginPage.dart';
 import 'package:collection/collection.dart'; // For firstWhereOrNull
+import 'package:hedieaty_app/views/MyEventDetails.dart';
 
 class EventListPage extends StatefulWidget {
   @override
@@ -58,16 +59,32 @@ class _EventListPageState extends State<EventListPage> {
     _loadEvents();
   }
 
+  // String _getEventStatus(Event event) {
+  //   final now = DateTime.now();
+  //   if (event.date.isAfter(now)) {
+  //     return 'Upcoming';
+  //   } else if (event.date.isBefore(now)) {
+  //     return 'Past';
+  //   } else {
+  //     return 'Current';
+  //   }
+  // }
   String _getEventStatus(Event event) {
     final now = DateTime.now();
-    if (event.date.isAfter(now)) {
+
+    // Extract only the date parts (year, month, day) for comparison
+    final today = DateTime(now.year, now.month, now.day);
+    final eventDate = DateTime(event.date.year, event.date.month, event.date.day);
+
+    if (eventDate.isAfter(today)) {
       return 'Upcoming';
-    } else if (event.date.isBefore(now)) {
+    } else if (eventDate.isBefore(today)) {
       return 'Past';
     } else {
-      return 'Current';
+      return 'Current'; // Event date matches today's date
     }
   }
+
 
   void _sortEvents() {
     setState(() {
@@ -204,80 +221,107 @@ class _EventListPageState extends State<EventListPage> {
         itemCount: events.length,
         itemBuilder: (context, index) {
           final status = _getEventStatus(events[index]);
-          return Card(
-            margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          return GestureDetector(
+            onTap: () {
+              // Navigate to EventDetailsPage
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EventDetailsPage(event: events[index]),
+                ),
+              );
+            },
+            child: Card(
+              margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            events[index].name,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '${events[index].published ? 'Live' : 'Offline'}',
+                            style: TextStyle(
+                              color: events[index].published ? Colors.green : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Status: $status', // Display the status
+                            style: TextStyle(
+                              color: status == 'Upcoming'
+                                  ? Colors.blue
+                                  : status == 'Current'
+                                  ? Colors.green
+                                  : Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                              'Category: ${events[index].category}'
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Date: ${events[index].date.toLocal().toString().split(' ')[0]}',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          events[index].name,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        IconButton(
+                          icon: Icon(Icons.cloud_upload, color: Colors.blue),
+                          onPressed: () async {
+                            try {
+                              await _eventController.publishEventToFirestore(events[index]);
+                              setState(() {
+                                events[index].published = true; // Update local state
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Event published successfully!')),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to publish event: $e')),
+                              );
+                            }
+                          },
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Category: ${events[index].category}, Status: ${events[index].published ? 'Live' : 'Offline'}',
-                          style: TextStyle(
-                            color: events[index].published ? Colors.green : Colors.red,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        IconButton(
+                          icon: Icon(Icons.edit, color: Colors.blue),
+                          onPressed: () {
+                            _showEventDialog(event: events[index]);
+                          },
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Date: ${events[index].date.toLocal().toString().split(' ')[0]}',
-                          style: TextStyle(color: Colors.grey[600]),
+                        IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            _deleteEvent(events[index].id!,firestoreId: events[index].firestoreId);
+                          },
                         ),
                       ],
                     ),
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.cloud_upload, color: Colors.blue),
-                        onPressed: () async {
-                          try {
-                            await _eventController.publishEventToFirestore(events[index]);
-                            setState(() {
-                              events[index].published = true; // Update local state
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Event published successfully!')),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to publish event: $e')),
-                            );
-                          }
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () {
-                          _showEventDialog(event: events[index]);
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          _deleteEvent(events[index].id!,firestoreId: events[index].firestoreId);
-                        },
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );

@@ -60,14 +60,20 @@ class Event {
   static final DatabaseHelper _databaseHelper = DatabaseHelper();
 
   static Future<int> insertEvent(Map<String, dynamic> event, {int? published}) async {
-    if(published==1){
-      publishEventToFirestore(fromMap(event));
-      return 1;
-    }else{
-      final db = await _databaseHelper.database;
-      return await db.insert('Events', event);
+    final db = await _databaseHelper.database;
+
+    // Step 1: Insert event into SQLite and get the generated ID
+    int newId = await db.insert('Events', event);
+
+    // Step 2: Publish the event if it should be published
+    if (published == 1) {
+      final newEvent = Event.fromMap({...event, 'id': newId});
+      await publishEventToFirestore(newEvent);
     }
+
+    return newId;
   }
+
 
   static Future<List<Event>> fetchEventsForUser(String? userId) async {
     final db = await _databaseHelper.database;
@@ -109,6 +115,11 @@ class Event {
 
   static Future<void> publishEventToFirestore(Event event) async {
     try {
+      if (event.id == null) {
+        throw Exception('Event ID is null. Save the event to SQLite before publishing.');
+      }
+
+      // Create or update the Firestore document
       if (event.firestoreId != null) {
         // Update existing Firestore document
         await _firestore.collection('events').doc(event.firestoreId).set({
@@ -132,14 +143,23 @@ class Event {
           'user_id': event.userId,
         });
 
-        // Save the Firestore document ID in the local database
+        // Save the Firestore document ID in the event object
         event.firestoreId = docRef.id;
-        await updateEvent(event.id!, event.toMap());
       }
+
+      // Ensure the `published` field is set to 1
+      event.published = true;
+
+      // Update the SQLite record with the new Firestore ID and `published` status
+      final updatedEventMap = event.toMap();
+      updatedEventMap['published'] = 1; // Explicitly set published to 1
+      await updateEvent(event.id!, updatedEventMap);
     } catch (e) {
       throw Exception('Failed to publish event: $e');
     }
   }
+
+
 
   static Future<void> unpublishEventFromFirestore(String? firestoreId) async {
     try {
@@ -195,6 +215,18 @@ class Event {
 
     return updatedLocalEvents;
   }
+
+  static Future<Event> fetchEventById(String? eventId) async {
+    final db = await _databaseHelper.database;
+    final maps = await db.query('Events', where: 'firestore_id = ?', whereArgs: [eventId]);
+
+    if (maps.isNotEmpty) {
+      return Event.fromMap(maps.first);
+    } else {
+      throw Exception('Event not found.');
+    }
+  }
+
 //remove reqular fetch IMPPPPPPPPPPPPPPPP!!!!!!!!!!!1
 
 }
