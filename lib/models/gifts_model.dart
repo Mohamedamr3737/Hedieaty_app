@@ -142,6 +142,9 @@ class Gift {
 
       // Check if the event is published
       if (!event.published) {
+        final giftMap = gift.toMap();
+        giftMap['published'] = 0; // SQLite expects 1 for true
+        await updateGift(gift.id!, giftMap); // Update the gift in SQLite
         throw Exception('Cannot publish gift: The associated event is not published.');
       }
 

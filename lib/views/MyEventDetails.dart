@@ -4,7 +4,9 @@ import 'package:hedieaty_app/models/gifts_model.dart';
 import 'package:hedieaty_app/controllers/gift_controller.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:hedieaty_app/utils/cloudinary_helper.dart';
+import 'package:hedieaty_app/utils/imageHandler.dart';
+import 'package:hedieaty_app/utils/uploadThings.dart';
+import 'package:path_provider/path_provider.dart';
 
 class EventDetailsPage extends StatefulWidget {
   final Event event;
@@ -47,6 +49,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     _loadGifts();
   }
 
+  final ImageHandler imageHandler = ImageHandler(); // Initialize handler
+
   void _showGiftDialog({Gift? gift}) async {
     final nameController = TextEditingController(text: gift?.name ?? '');
     final descriptionController = TextEditingController(text: gift?.description ?? '');
@@ -55,24 +59,44 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     bool isPublished = gift?.published ?? false;
     String? imageLink = gift?.imageLink;
 
-    void _selectImage() async {
+    // Select and save image locally
+    String? localImagePath; // Holds the local file path
+
+    Future<void> _selectImage({Gift? gift, Function()? updateDialogState}) async {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
       if (pickedFile != null) {
-        final imageFile = File(pickedFile.path);
-        final uploadedImageUrl = await CloudinaryHelper.uploadImage(imageFile);
-        if (uploadedImageUrl != null) {
+        try {
+          // Save the image locally
+          final directory = await getApplicationDocumentsDirectory();
+          final localPath = '${directory.path}/${pickedFile.name}';
+          final imageFile = File(pickedFile.path);
+          await imageFile.copy(localPath);
+
           setState(() {
-            imageLink = uploadedImageUrl;
+            gift?.imageLink = localPath; // Update the gift object's imageLink
+            imageLink = localPath; // Update dialog's imageLink
           });
-        } else {
+
+          if (updateDialogState != null) updateDialogState(); // Update dialog UI
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to upload image.')),
+            SnackBar(content: Text('Image saved locally')),
+          );
+        } catch (e) {
+          print('Error saving image: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to save image locally')),
           );
         }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No image selected')),
+        );
       }
     }
+
 
     showDialog(
       context: context,
@@ -104,12 +128,15 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                     ),
                     SizedBox(height: 16),
                     imageLink != null
-                        ? Image.network(imageLink!, height: 100)
+                        ? Image.file(File(imageLink!), height: 100)
                         : Text('No image selected'),
                     TextButton.icon(
                       icon: Icon(Icons.upload),
                       label: Text('Upload Image'),
-                      onPressed: _selectImage,
+                      onPressed: () => _selectImage(
+                        gift: gift,
+                        updateDialogState: () => setState(() {}),
+                      ),
                     ),
                     SizedBox(height: 16),
                     SwitchListTile(
@@ -132,37 +159,47 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 TextButton(
                   child: Text('Save'),
                   onPressed: () async {
+                    String? finalImageLink = gift?.imageLink;
+
+                    if (isPublished &&
+                        (gift?.imageLink != null && !gift!.imageLink!.startsWith('http'))) {
+                      final uploadedImageUrl =
+                      await UploadService.uploadFile(File(gift.imageLink!));
+
+                      if (uploadedImageUrl != null) {
+                        finalImageLink = uploadedImageUrl;
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to upload image.')),
+                        );
+                        return;
+                      }
+                    }
+
                     final newGift = Gift(
                       id: gift?.id,
                       name: nameController.text,
                       description: descriptionController.text,
                       category: categoryController.text,
                       price: double.tryParse(priceController.text) ?? 0.0,
-                      status: 'Pending',
+                      status: isPublished ? 'Published' : 'Pending',
                       published: isPublished,
                       eventId: widget.event.firestoreId,
                       firestoreId: gift?.firestoreId,
-                      imageLink: imageLink,
+                      imageLink: finalImageLink,
                     );
 
                     if (gift == null) {
-                      _addGift(newGift, published: isPublished?1:0);
+                      _addGift(newGift, published: isPublished ? 1 : 0);
                     } else {
-                      if (isPublished && !gift.published) {
-                        // Publish the gift
+                      if (isPublished) {
                         await _giftController.publishGiftToFirestore(newGift);
-                      } else if (!isPublished && gift.published) {
-                        // Unpublish the gift
-                        await _giftController.unpublishGift(newGift);
                       } else {
-                        // Simply update the gift
                         _updateGift(newGift);
                       }
                     }
 
-                    // Reload the gifts list to reflect changes
                     _loadGifts();
-
                     Navigator.pop(context);
                   },
                 ),
@@ -172,7 +209,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
         );
       },
     );
+
   }
+
 
 
 
@@ -194,6 +233,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 Text('Category: ${widget.event.category}'),
                 Text('Date: ${widget.event.date.toLocal().toString().split(' ')[0]}'),
                 Text('Status: ${widget.event.published ? 'Published' : 'Offline'}'),
+                Text('Description: ${widget.event.description}'),
+                Text('Location: ${widget.event.location}'),
+
               ],
             ),
           ),
@@ -203,46 +245,115 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               itemCount: gifts.length,
               itemBuilder: (context, index) {
                 final gift = gifts[index];
-                return ListTile(
-                  title: Text(gift.name),
-                  subtitle: Text('Category: ${gift.category}, Price: \$${gift.price}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.cloud_upload, color: Colors.blue),
-                        onPressed: () async {
-                          try {
-                            await _giftController.publishGiftToFirestore(gift);
-                            setState(() {
-                              gift.published = true; // Update local state
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Gift published successfully!')),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('$e')),
-                            );
-                          }
-                        },
-                      ),
+                return Card(
+                  margin: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Gift Image
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8.0),
+                          child: gift.imageLink != null && gift.imageLink!.startsWith('http')
+                      ? Image.network(
+                    gift.imageLink!,
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                  )
+                      : Image.file(
+                    File(gift.imageLink ?? ''),
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                  ),
 
-                      IconButton(
-                        icon: Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () {
-                          _showGiftDialog(gift: gift);
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          _deleteGift(gift.id!, firestoreId: gift.firestoreId);
-                        },
-                      ),
-                    ],
+                ),
+                        SizedBox(width: 12), // Spacing between image and content
+
+                        // Gift Details and Actions
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Gift Name
+                              Text(
+                                gift.name,
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              SizedBox(height: 4),
+
+                              // Category and Price
+                              Text(
+                                'Category: ${gift.category}',
+                                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                              ),
+                              Text(
+                                'Price: \$${gift.price.toStringAsFixed(2)}',
+                                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                              ),
+                              SizedBox(height: 4),
+
+                              // Live/Offline Status
+                              Text(
+                                gift.published ? 'Live' : 'Offline',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: gift.published ? Colors.green : Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Action Buttons
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.cloud_upload, color: Colors.blue),
+                              tooltip: 'Publish Gift',
+                              onPressed: () async {
+                                try {
+                                  await _giftController.publishGiftToFirestore(gift);
+                                  setState(() {
+                                    gift.published = true; // Update local state
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Gift published successfully!')),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(e.toString().split(':').last)),
+                                  );
+                                }
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.edit, color: Colors.orange),
+                              tooltip: 'Edit Gift',
+                              onPressed: () {
+                                _showGiftDialog(gift: gift);
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red),
+                              tooltip: 'Delete Gift',
+                              onPressed: () {
+                                _deleteGift(gift.id!, firestoreId: gift.firestoreId);
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 );
+
               },
             ),
           ),

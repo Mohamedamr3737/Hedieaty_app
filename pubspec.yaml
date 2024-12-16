@@ -54,6 +54,11 @@ dependencies:
 #  shared_preferences: ^2.3.3
   flutter_secure_storage: ^9.2.2
 
+  firebase_storage: ^12.3.7
+
+  path_provider: ^2.1.5  # For saving the image locally
+
+
 
 
 
