@@ -196,7 +196,15 @@ class _EventListPageState extends State<EventListPage> {
       appBar: AppBar(
         title: Text('Event List'),
         actions: [
-          DropdownButton<String>(
+      IconButton(
+      icon: Icon(Icons.refresh),
+      tooltip: 'Refresh',
+      onPressed: () {
+        // Call the method to refresh events
+        _loadEvents();
+      },
+      ),
+      DropdownButton<String>(
             value: _sortBy,
             icon: Icon(Icons.sort),
             onChanged: (String? newValue) {

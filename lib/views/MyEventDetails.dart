@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:hedieaty_app/utils/imageHandler.dart';
 import 'package:hedieaty_app/utils/uploadThings.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:hedieaty_app/utils/image_upload_service.dart';
 
 class EventDetailsPage extends StatefulWidget {
   final Event event;
@@ -19,20 +20,37 @@ class EventDetailsPage extends StatefulWidget {
 
 class _EventDetailsPageState extends State<EventDetailsPage> {
   final GiftController _giftController = GiftController();
+  final ImageUploadService _imageUploadService = ImageUploadService();
+
   List<Gift> gifts = [];
 
   @override
   void initState() {
     super.initState();
-    _loadGifts();
+    try {
+      _RefreshGifts();
+    }catch(e){
+      _loadGifts();
+    }
   }
 
-  void _loadGifts() async {
-    final fetchedGifts = await _giftController.fetchGiftsForEvent(widget.event.firestoreId!);
+
+  void _RefreshGifts() async {
+    final gifts = await Gift.fetchGiftsForEventWithSync(widget.event.firestoreId);
+    // final gifts = await _giftController.fetchGiftsForEvent(widget.event.firestoreId);
     setState(() {
-      gifts = fetchedGifts;
+      this.gifts = gifts;
     });
   }
+
+
+  void _loadGifts() async {
+    final gifts = await _giftController.fetchGiftsForEvent(widget.event.firestoreId);
+    setState(() {
+      this.gifts = gifts;
+    });
+  }
+
 
   void _addGift(Gift gift,{int? published}) async {
     await _giftController.addGift(gift,published: published);
@@ -159,13 +177,13 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 TextButton(
                   child: Text('Save'),
                   onPressed: () async {
-                    String? finalImageLink = gift?.imageLink;
+                    String? finalImageLink = imageLink;
 
                     if (isPublished &&
-                        (gift?.imageLink != null && !gift!.imageLink!.startsWith('http'))) {
-                      final uploadedImageUrl =
-                      await UploadService.uploadFile(File(gift.imageLink!));
+                        (finalImageLink != null && !finalImageLink.startsWith('http'))) {
 
+                      var uploadedImageUrl =
+                      await _imageUploadService.uploadImage(File(finalImageLink));
                       if (uploadedImageUrl != null) {
                         finalImageLink = uploadedImageUrl;
                       } else {
@@ -189,11 +207,14 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                       imageLink: finalImageLink,
                     );
 
+
                     if (gift == null) {
                       _addGift(newGift, published: isPublished ? 1 : 0);
                     } else {
                       if (isPublished) {
+                        _updateGift(newGift);
                         await _giftController.publishGiftToFirestore(newGift);
+
                       } else {
                         _updateGift(newGift);
                       }
@@ -220,6 +241,16 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Event Details'),
+        actions: [
+      IconButton(
+      icon: Icon(Icons.refresh),
+      tooltip: 'Refresh',
+      onPressed: () {
+        // Call the method to refresh events
+        _RefreshGifts();
+      },
+      ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,7 +276,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               itemCount: gifts.length,
               itemBuilder: (context, index) {
                 final gift = gifts[index];
-                return Card(
+                return Hero(
+
+                  tag: 'gift_${gift.firestoreId ?? gift.id ?? UniqueKey().toString()}',
+                  child: Card(
                   margin: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 4,
@@ -258,20 +292,46 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8.0),
                           child: gift.imageLink != null && gift.imageLink!.startsWith('http')
-                      ? Image.network(
-                    gift.imageLink!,
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                  )
-                      : Image.file(
-                    File(gift.imageLink ?? ''),
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                  ),
+                              ? FadeInImage.assetNetwork(
+                            placeholder: 'assets/images/default_image.jpg', // Placeholder image
+                            image: gift.imageLink!,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            imageErrorBuilder: (context, error, stackTrace) {
+                              // Fallback to default image if network image fails
+                              return Image.asset(
+                                'assets/images/default_image.jpg',
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                              );
+                            },
+                          )
+                              : gift.imageLink != null && File(gift.imageLink!).existsSync()
+                              ? FadeInImage(
+                            placeholder: AssetImage('assets/images/default_image.jpg'), // Placeholder image
+                            image: FileImage(File(gift.imageLink!)), // Local image
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            imageErrorBuilder: (context, error, stackTrace) {
+                              return Image.asset(
+                                'assets/images/default_image.jpg',
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                              );
+                            },
+                          )
+                              : Image.asset(
+                            'assets/images/default_image.jpg', // Default image if no link
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
 
-                ),
                         SizedBox(width: 12), // Spacing between image and content
 
                         // Gift Details and Actions
@@ -352,8 +412,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                       ],
                     ),
                   ),
+                ),
                 );
-
               },
             ),
           ),

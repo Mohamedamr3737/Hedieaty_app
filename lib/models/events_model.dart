@@ -1,7 +1,7 @@
 import '../database/database_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:collection/collection.dart';
-
+import 'package:hedieaty_app/models/gifts_model.dart';
 
 final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -87,30 +87,30 @@ class Event {
     return await db.update('Events', event, where: 'id = ?', whereArgs: [id]);
   }
 
-  static Future<int> deleteEvent(int id, {String? firestoreId}) async {
-    final db = await _databaseHelper.database;
-
-    // Delete from SQLite
-    final rowsDeleted = await db.delete(
-      'Events',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    // Delete from Firestore if `firestoreId` is provided
-    if (firestoreId != null) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('events')
-            .doc(firestoreId)
-            .delete();
-      } catch (e) {
-        print('Failed to delete event from Firestore: $e');
-      }
-    }
-
-    return rowsDeleted;
-  }
+  // static Future<int> deleteEvent(int id, {String? firestoreId}) async {
+  //   final db = await _databaseHelper.database;
+  //
+  //   // Delete from SQLite
+  //   final rowsDeleted = await db.delete(
+  //     'Events',
+  //     where: 'id = ?',
+  //     whereArgs: [id],
+  //   );
+  //
+  //   // Delete from Firestore if `firestoreId` is provided
+  //   if (firestoreId != null) {
+  //     try {
+  //       await FirebaseFirestore.instance
+  //           .collection('events')
+  //           .doc(firestoreId)
+  //           .delete();
+  //     } catch (e) {
+  //       print('Failed to delete event from Firestore: $e');
+  //     }
+  //   }
+  //
+  //   return rowsDeleted;
+  // }
 
 
   static Future<void> publishEventToFirestore(Event event) async {
@@ -226,6 +226,46 @@ class Event {
       throw Exception('Event not found.');
     }
   }
+
+  static Future<int> deleteEvent(int id, {String? firestoreId}) async {
+    final db = await _databaseHelper.database;
+
+    // Step 1: Delete associated gifts from Firestore
+    if (firestoreId != null) {
+      try {
+        final giftsQuerySnapshot = await FirebaseFirestore.instance
+            .collection('gifts')
+            .where('event_id', isEqualTo: firestoreId)
+            .get();
+
+        for (var doc in giftsQuerySnapshot.docs) {
+          await FirebaseFirestore.instance.collection('gifts').doc(doc.id).delete();
+        }
+
+        // Step 2: Delete the event from Firestore
+        await FirebaseFirestore.instance.collection('events').doc(firestoreId).delete();
+      } catch (e) {
+        print('Failed to delete associated gifts or event from Firestore: $e');
+      }
+    }
+
+    // // Step 3: Delete associated gifts from SQLite
+    // await db.delete(
+    //   'Gifts',
+    //   where: 'event_id = ?',
+    //   whereArgs: [firestoreId],
+    // );
+
+    // Step 4: Delete the event from SQLite
+    final rowsDeleted = await db.delete(
+      'Events',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    return rowsDeleted;
+  }
+
 
 //remove reqular fetch IMPPPPPPPPPPPPPPPP!!!!!!!!!!!1
 

@@ -1,6 +1,7 @@
 import '../database/database_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'events_model.dart';
+import 'package:collection/collection.dart';
 
 class Gift {
   int? id;
@@ -78,8 +79,68 @@ class Gift {
     return newId; // Return the new ID
   }
 
+
+  /////
+  static Future<List<Gift>> fetchGiftsForEventWithSync(String? eventId) async {
+    // Step 1: Fetch gifts from SQLite
+    final localGifts = await Gift.fetchGiftsForEvent(eventId);
+
+    // Step 2: Try fetching gifts from Firestore
+    List<Gift> firestoreGifts = [];
+    try {
+      firestoreGifts = await FirebaseFirestore.instance
+          .collection('gifts')
+          .where('event_id', isEqualTo: eventId)
+          .get()
+          .then((snapshot) => snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Gift(
+          name: data['name'],
+          description: data['description'],
+          category: data['category'],
+          price: data['price'],
+          status: data['status'],
+          published: data['published'] ?? false,
+          eventId: data['event_id'],
+          firestoreId: doc.id,
+          imageLink: data['imageLink'],
+        );
+      }).toList());
+    } catch (e) {
+      print('Firestore fetch failed: $e'); // Log the error
+      // Proceed with local data only
+    }
+
+    // Step 3: Sync Firestore gifts to SQLite if available
+    if (firestoreGifts.isNotEmpty) {
+      for (var firestoreGift in firestoreGifts) {
+        final existingGift = localGifts.firstWhereOrNull(
+              (localGift) => localGift.firestoreId == firestoreGift.firestoreId,
+        );
+
+        if (existingGift == null) {
+          // Insert new gift into SQLite
+          await Gift.insertGift(firestoreGift.toMap());
+        } else {
+          // Optionally update the local gift if Firestore gift is newer
+          await Gift.updateGift(existingGift.id!, firestoreGift.toMap());
+        }
+      }
+    }
+
+    // Step 4: Fetch updated local gifts from SQLite
+    final updatedLocalGifts = await Gift.fetchGiftsForEvent(eventId);
+
+    // Step 5: Return combined list of gifts
+    return updatedLocalGifts;
+  }
+
+
+
   // Fetch gifts for an event from SQLite
   static Future<List<Gift>> fetchGiftsForEvent(String? eventId) async {
+
+
     final db = await _databaseHelper.database;
 
     final maps = await db.query('Gifts', where: 'event_id = ?', whereArgs: [eventId]);
@@ -108,9 +169,10 @@ class Gift {
         throw Exception('Cannot update Firestore: Firestore ID is null.');
       }
     }
-
+    final updatedGift2 = Map<String, dynamic>.from(gift);
+    updatedGift2.remove('id');
     // Update the gift in SQLite
-    return await db.update('Gifts', gift, where: 'id = ?', whereArgs: [id]);
+    return await db.update('Gifts', updatedGift2, where: 'id = ?', whereArgs: [id]);
   }
 
 

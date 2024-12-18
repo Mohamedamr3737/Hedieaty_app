@@ -1,324 +1,104 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:hedieaty_app/models/events_model.dart';
-import 'package:hedieaty_app/controllers/event_controller.dart';
-import 'package:hedieaty_app/controllers/Session_controller.dart';
-import 'package:hedieaty_app/LoginPage.dart';
-import 'package:collection/collection.dart'; // For firstWhereOrNull
-import 'package:hedieaty_app/views/MyEventDetails.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:hedieaty_app/utils/image_upload_service.dart';
 
-class EventListPage extends StatefulWidget {
-  @override
-  _EventListPageState createState() => _EventListPageState();
+void main() {
+  runApp(UploadTestApp());
 }
 
-class _EventListPageState extends State<EventListPage> {
-  final EventController _eventController = EventController();
-  List<Event> events = [];
-  String _sortBy = 'Status';
-
+class UploadTestApp extends StatefulWidget {
   @override
-  void initState() {
-    super.initState();
-    _loadEvents();
-  }
+  _UploadTestAppState createState() => _UploadTestAppState();
+}
 
-  void _loadEvents() async {
-    final String? userId = await SecureSessionManager.getUserId();
-    if (userId != null) {
-      final allEvents = await _eventController.fetchEvents(userId);
-      setState(() {
-        events = allEvents;
-        _sortEvents();
-      });
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
-      );
-    }
-  }
+class _UploadTestAppState extends State<UploadTestApp> {
+  final ImageUploadService _imageUploadService = ImageUploadService();
 
-  void _addEvent(Event event, {int? published}) async {
-    await _eventController.addEvent(event,published: published);
-    _loadEvents();
-  }
+  File? _selectedImage;
+  String? _uploadedImageUrl;
 
-  void _updateEvent(Event event) async {
-    await _eventController.updateEvent(event);
-    _loadEvents();
-  }
+  /// Select an image from the gallery
+  Future<void> _selectImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-  void _deleteEvent(int id,{String? firestoreId}) async {
-    if(firestoreId!=null){
-      print(firestoreId);
-      await _eventController.deleteEvent(id, firestoreId: firestoreId);
-
-    }else{
-      await _eventController.deleteEvent(id);
-    }
-    _loadEvents();
-  }
-
-  // String _getEventStatus(Event event) {
-  //   final now = DateTime.now();
-  //   if (event.date.isAfter(now)) {
-  //     return 'Upcoming';
-  //   } else if (event.date.isBefore(now)) {
-  //     return 'Past';
-  //   } else {
-  //     return 'Current';
-  //   }
-  // }
-  String _getEventStatus(Event event) {
-    final now = DateTime.now();
-
-    // Extract only the date parts (year, month, day) for comparison
-    final today = DateTime(now.year, now.month, now.day);
-    final eventDate = DateTime(event.date.year, event.date.month, event.date.day);
-
-    if (eventDate.isAfter(today)) {
-      return 'Upcoming';
-    } else if (eventDate.isBefore(today)) {
-      return 'Past';
-    } else {
-      return 'Current'; // Event date matches today's date
-    }
-  }
-
-
-  void _sortEvents() {
-    setState(() {
-      if (_sortBy == 'Status') {
-        events.sort((a, b) {
-          final statusA = _getEventStatus(a);
-          final statusB = _getEventStatus(b);
-          return statusA.compareTo(statusB);
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
         });
-      } else if (_sortBy == 'Name') {
-        events.sort((a, b) => a.name.compareTo(b.name));
+        print('Image selected: ${_selectedImage!.path}');
+      } else {
+        print('No image selected.');
       }
-    });
+    } catch (e) {
+      print('Error selecting image: $e');
+    }
   }
 
-  void _showEventDialog({Event? event}) {
-    final nameController = TextEditingController(text: event?.name ?? '');
-    final categoryController = TextEditingController(text: event?.category ?? '');
-    final locationController = TextEditingController(text: event?.location ?? '');
-    final descriptionController = TextEditingController(text: event?.description ?? '');
-    final dateController = TextEditingController(
-        text: event != null ? event.date.toIso8601String().split('T')[0] : '');
-    bool isPublished = event?.published ?? false;
+  /// Upload the image via the service
+  Future<void> _uploadImage() async {
+    if (_selectedImage == null) {
+      print('No image selected to upload.');
+      return;
+    }
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text(event == null ? 'Add Event' : 'Edit Event'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: InputDecoration(labelText: 'Event Name'),
-                    ),
-                    TextField(
-                      controller: categoryController,
-                      decoration: InputDecoration(labelText: 'Category'),
-                    ),
-                    TextField(
-                      controller: locationController,
-                      decoration: InputDecoration(labelText: 'Location'),
-                    ),
-                    TextField(
-                      controller: descriptionController,
-                      decoration: InputDecoration(labelText: 'Description'),
-                    ),
-                    TextField(
-                      controller: dateController,
-                      decoration: InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
-                      keyboardType: TextInputType.datetime,
-                    ),
-                    SwitchListTile(
-                      title: Text('Publish Event'),
-                      value: isPublished,
-                      onChanged: (value) {
-                        setState(() {
-                          isPublished = value;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  child: Text('Cancel'),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                TextButton(
-                  child: Text('Save'),
-                  onPressed: () async {
-                    final updatedEvent = Event(
-                      id: event?.id,
-                      name: nameController.text,
-                      category: categoryController.text,
-                      location: locationController.text,
-                      description: descriptionController.text,
-                      date: DateTime.parse(dateController.text),
-                      userId: await SecureSessionManager.getUserId() ?? 'unknown_user',
-                      published: isPublished,
-                      firestoreId: event?.firestoreId,
-                    );
+    try {
+      // Delegate upload to the service
+      final response = await _imageUploadService.uploadImage(_selectedImage!);
 
-                    if (updatedEvent.id == null) {
-                      _addEvent(updatedEvent, published: updatedEvent.published?1:0);
-                    } else {
-                      _updateEvent(updatedEvent);
-                    }
-
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+      if (response.isNotEmpty && response['url'] != null) {
+        setState(() {
+          _uploadedImageUrl = response['url'];
+        });
+        print('Image uploaded successfully: $_uploadedImageUrl');
+      } else {
+        print('Failed to upload the image.');
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Event List'),
-        actions: [
-          DropdownButton<String>(
-            value: _sortBy,
-            icon: Icon(Icons.sort),
-            onChanged: (String? newValue) {
-              setState(() {
-                _sortBy = newValue!;
-                _sortEvents();
-              });
-            },
-            items: <String>['Name', 'Status']
-                .map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text('Sort by $value'),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-      body: events.isEmpty
-          ? Center(child: Text("No events to show"))
-          : ListView.builder(
-        itemCount: events.length,
-        itemBuilder: (context, index) {
-          final status = _getEventStatus(events[index]);
-          return Card(
-            margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          events[index].name,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          '${events[index].published ? 'Live' : 'Offline'}',
-                          style: TextStyle(
-                            color: events[index].published ? Colors.green : Colors.red,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Status: $status', // Display the status
-                          style: TextStyle(
-                            color: status == 'Upcoming'
-                                ? Colors.blue
-                                : status == 'Current'
-                                ? Colors.green
-                                : Colors.grey,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                            'Category: ${events[index].category}'
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Date: ${events[index].date.toLocal().toString().split(' ')[0]}',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.cloud_upload, color: Colors.blue),
-                        onPressed: () async {
-                          try {
-                            await _eventController.publishEventToFirestore(events[index]);
-                            setState(() {
-                              events[index].published = true; // Update local state
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Event published successfully!')),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to publish event: $e')),
-                            );
-                          }
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () {
-                          _showEventDialog(event: events[index]);
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          _deleteEvent(events[index].id!,firestoreId: events[index].firestoreId);
-                        },
-                      ),
-                    ],
-                  ),
-                ],
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('Image Upload Module'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _selectedImage != null
+                  ? Image.file(
+                _selectedImage!,
+                width: 200,
+                height: 200,
+                fit: BoxFit.cover,
+              )
+                  : Text('No image selected'),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _selectImage,
+                child: Text('Select Image'),
               ),
-            ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showEventDialog(),
-        child: Icon(Icons.add),
+              ElevatedButton(
+                onPressed: _uploadImage,
+                child: Text('Upload Image'),
+              ),
+              SizedBox(height: 20),
+              _uploadedImageUrl != null
+                  ? SelectableText(
+                'Uploaded Image URL: $_uploadedImageUrl',
+                style: TextStyle(color: Colors.green),
+              )
+                  : Text('No image uploaded'),
+            ],
+          ),
+        ),
       ),
     );
   }
