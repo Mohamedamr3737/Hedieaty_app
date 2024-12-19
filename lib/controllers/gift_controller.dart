@@ -25,4 +25,14 @@ class GiftController {
     return await Gift.unpublishGift(gift);
   }
 
+  // Update gift status to 'Pledged'
+  Future<void> pledgeGift(String firestoreId, String pledgedBy) async {
+    try {
+      print(pledgedBy);
+      await Gift.updateGiftStatus(firestoreId, 'Pledged', pledgedBy);
+    } catch (e) {
+      throw Exception('Error pledging gift: $e');
+    }
+  }
+
 }

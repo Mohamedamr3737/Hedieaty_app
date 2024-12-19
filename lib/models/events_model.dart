@@ -81,6 +81,8 @@ class Event {
     return maps.map((map) => Event.fromMap(map)).toList();
   }
 
+
+
   static Future<int> updateEvent(int id, Map<String, dynamic> event) async {
     final db = await _databaseHelper.database;
     event.remove('id');

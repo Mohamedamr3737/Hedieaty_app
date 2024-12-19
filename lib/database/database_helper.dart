@@ -19,7 +19,7 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     print(dbPath);
-    final path = join(dbPath, 'user_database12111.db');
+    final path = join(dbPath, 'user_database33.db');
 
     return await openDatabase(
       path,
@@ -122,7 +122,7 @@ class DatabaseHelper {
     await db.execute('''
     CREATE TABLE Friends (
       user_id Text NOT NULL,
-      friend_id INTEGER NOT NULL,
+      friend_id Text NOT NULL,
       PRIMARY KEY (user_id, friend_id),
       FOREIGN KEY (user_id) REFERENCES Users (uid) ON DELETE CASCADE
     );

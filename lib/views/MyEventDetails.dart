@@ -79,6 +79,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
 
     // Select and save image locally
     String? localImagePath; // Holds the local file path
+    // Dropdown options for status
+    final List<String> statusOptions = ['Available', 'Pledged', 'Purchased'];
+    String selectedStatus = gift?.status ?? 'Available';
 
     Future<void> _selectImage({Gift? gift, Function()? updateDialogState}) async {
       final picker = ImagePicker();
@@ -138,6 +141,22 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                     TextField(
                       controller: categoryController,
                       decoration: InputDecoration(labelText: 'Category'),
+                    ),
+                    // Dropdown for Gift Status
+                    DropdownButtonFormField<String>(
+                      value: selectedStatus,
+                      decoration: InputDecoration(labelText: 'Status'),
+                      items: statusOptions.map((String status) {
+                        return DropdownMenuItem<String>(
+                          value: status,
+                          child: Text(status),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedStatus = newValue ?? 'Available';
+                        });
+                      },
                     ),
                     TextField(
                       controller: priceController,
@@ -200,7 +219,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                       description: descriptionController.text,
                       category: categoryController.text,
                       price: double.tryParse(priceController.text) ?? 0.0,
-                      status: isPublished ? 'Published' : 'Pending',
+                      status: selectedStatus, // Use the selected dropdown value
                       published: isPublished,
                       eventId: widget.event.firestoreId,
                       firestoreId: gift?.firestoreId,
@@ -276,147 +295,206 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               itemCount: gifts.length,
               itemBuilder: (context, index) {
                 final gift = gifts[index];
-                return Hero(
 
+                // Determine the card color based on the status
+                Color cardColor;
+                if (gift.status == 'Pledged') {
+                  cardColor = Colors.green[100]!;
+                } else if (gift.status == 'Purchased') {
+                  cardColor = Colors.blue[100]!;
+                } else {
+                  cardColor = Colors.white;
+                }
+
+                return Hero(
                   tag: 'gift_${gift.firestoreId ?? gift.id ?? UniqueKey().toString()}',
                   child: Card(
-                  margin: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Gift Image
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8.0),
-                          child: gift.imageLink != null && gift.imageLink!.startsWith('http')
-                              ? FadeInImage.assetNetwork(
-                            placeholder: 'assets/images/default_image.jpg', // Placeholder image
-                            image: gift.imageLink!,
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                            imageErrorBuilder: (context, error, stackTrace) {
-                              // Fallback to default image if network image fails
-                              return Image.asset(
-                                'assets/images/default_image.jpg',
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                              );
-                            },
-                          )
-                              : gift.imageLink != null && File(gift.imageLink!).existsSync()
-                              ? FadeInImage(
-                            placeholder: AssetImage('assets/images/default_image.jpg'), // Placeholder image
-                            image: FileImage(File(gift.imageLink!)), // Local image
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                            imageErrorBuilder: (context, error, stackTrace) {
-                              return Image.asset(
-                                'assets/images/default_image.jpg',
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                              );
-                            },
-                          )
-                              : Image.asset(
-                            'assets/images/default_image.jpg', // Default image if no link
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
+                    color: cardColor, // Set the card color dynamically
+                    margin: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Gift Image
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8.0),
+                            child: gift.imageLink != null && gift.imageLink!.startsWith('http')
+                                ? FadeInImage.assetNetwork(
+                              placeholder: 'assets/images/default_image.jpg',
+                              image: gift.imageLink!,
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              imageErrorBuilder: (context, error, stackTrace) {
+                                return Image.asset(
+                                  'assets/images/default_image.jpg',
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                );
+                              },
+                            )
+                                : gift.imageLink != null && File(gift.imageLink!).existsSync()
+                                ? Image.file(
+                              File(gift.imageLink!),
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                            )
+                                : Image.asset(
+                              'assets/images/default_image.jpg',
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                        ),
+                          SizedBox(width: 12), // Spacing between image and content
 
-                        SizedBox(width: 12), // Spacing between image and content
-
-                        // Gift Details and Actions
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Gift Name
-                              Text(
-                                gift.name,
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(height: 4),
-
-                              // Category and Price
-                              Text(
-                                'Category: ${gift.category}',
-                                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                              ),
-                              Text(
-                                'Price: \$${gift.price.toStringAsFixed(2)}',
-                                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                              ),
-                              SizedBox(height: 4),
-
-                              // Live/Offline Status
-                              Text(
-                                gift.published ? 'Live' : 'Offline',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: gift.published ? Colors.green : Colors.red,
+                          // Gift Details and Actions
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Gift Name
+                                Text(
+                                  gift.name,
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
+                                SizedBox(height: 4),
 
-                        // Action Buttons
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.cloud_upload, color: Colors.blue),
-                              tooltip: 'Publish Gift',
-                              onPressed: () async {
-                                try {
-                                  await _giftController.publishGiftToFirestore(gift);
-                                  setState(() {
-                                    gift.published = true; // Update local state
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Gift published successfully!')),
-                                  );
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(e.toString().split(':').last)),
-                                  );
-                                }
-                              },
+                                // Category and Price
+                                Text(
+                                  'Category: ${gift.category}',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                                ),
+                                Text(
+                                  'Price: \$${gift.price.toStringAsFixed(2)}',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                                ),
+                                SizedBox(height: 4),
+
+                                // Gift Status
+                                Text(
+                                  'Status: ${gift.status}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: gift.status == 'Pledged'
+                                        ? Colors.green
+                                        : gift.status == 'Purchased'
+                                        ? Colors.blue
+                                        : Colors.grey,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+
+                                // Accept/Reject Buttons for Pledged Gifts
+                                if (gift.status == 'Pledged')
+                                  Row(
+                                    children: [
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          iconColor: Colors.blue, // Accept button color
+                                        ),
+                                        onPressed: () async {
+                                          // Update status to Purchased
+                                          gift.status = 'Purchased';
+                                          await _giftController.updateGift(gift);
+                                          setState(() {}); // Refresh UI
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Gift marked as Purchased!')),
+                                          );
+                                        },
+                                        child: Text('Accept'),
+                                      ),
+                                      SizedBox(width: 8),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          iconColor: Colors.red, // Reject button color
+                                        ),
+                                        onPressed: () async {
+                                          // Update status to Available
+                                          gift.status = 'Available';
+                                          await _giftController.updateGift(gift);
+                                          setState(() {}); // Refresh UI
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Gift marked as Available!')),
+                                          );
+                                        },
+                                        child: Text('Reject'),
+                                      ),
+                                    ],
+                                  )
+                                else
+                                // Action Buttons (Edit/Delete/Publish)
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.edit,
+                                            color: gift.status == 'Purchased'
+                                                ? Colors.grey // Disabled color
+                                                : Colors.orange),
+                                        tooltip: 'Edit Gift',
+                                        onPressed: gift.status == 'Purchased'
+                                            ? null // Disable button
+                                            : () {
+                                          _showGiftDialog(gift: gift);
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.delete,
+                                            color: gift.status == 'Purchased'
+                                                ? Colors.grey // Disabled color
+                                                : Colors.red),
+                                        tooltip: 'Delete Gift',
+                                        onPressed: gift.status == 'Purchased'
+                                            ? null // Disable button
+                                            : () {
+                                          _deleteGift(gift.id!, firestoreId: gift.firestoreId);
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.cloud_upload,
+                                            color: gift.status == 'Purchased'
+                                                ? Colors.grey // Disabled color
+                                                : Colors.blue),
+                                        tooltip: 'Publish Gift',
+                                        onPressed: gift.status == 'Purchased'
+                                            ? null // Disable button
+                                            : () async {
+                                          try {
+                                            await _giftController.publishGiftToFirestore(gift);
+                                            setState(() {
+                                              gift.published = true; // Update local state
+                                            });
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Gift published successfully!')),
+                                            );
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text(e.toString().split(':').last)),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                              ],
                             ),
-                            IconButton(
-                              icon: Icon(Icons.edit, color: Colors.orange),
-                              tooltip: 'Edit Gift',
-                              onPressed: () {
-                                _showGiftDialog(gift: gift);
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete, color: Colors.red),
-                              tooltip: 'Delete Gift',
-                              onPressed: () {
-                                _deleteGift(gift.id!, firestoreId: gift.firestoreId);
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
                 );
               },
             ),
           ),
+
         ],
       ),
       floatingActionButton: FloatingActionButton(

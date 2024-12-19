@@ -221,6 +221,7 @@ class Gift {
           'published': true,
           'event_id': gift.eventId,
           'imageLink': gift.imageLink,
+          'pledgedBy':"",
         });
       } else {
         // Create a new Firestore document and retrieve its ID
@@ -273,6 +274,20 @@ class Gift {
       await updateGift(gift.id!, giftMap);
     } catch (e) {
       throw Exception('Failed to unpublish gift: $e');
+    }
+  }
+
+  // Update gift status in Firestore
+  static Future<void> updateGiftStatus(String firestoreId, String newStatus, String pledgedBy) async {
+    try {
+      print(pledgedBy);
+      await FirebaseFirestore.instance
+          .collection('gifts')
+          .doc(firestoreId)
+          .update(
+          {'pledgeddBy': pledgedBy ,'status': newStatus,});
+    } catch (e) {
+      throw Exception('Error updating gift status: $e');
     }
   }
 
