@@ -75,12 +75,48 @@ class _ProfilePageState extends State<ProfilePage> {
     return eventsWithGifts;
   }
 
+  Future<void> _logout() async {
+    try {
+      await SecureSessionManager.clearSession(); // Clear session
+      Navigator.of(context).pushReplacementNamed('/login'); // Navigate to login screen
+    } catch (e) {
+      print('Error during logout: $e');
+      // Optionally, show a Snackbar or dialog with the error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to log out. Please try again.')),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Profile Page'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            onPressed: () async {
+              setState(() {
+                _isLoading = true; // Show loading indicator
+              });
+              await _loadUserData();
+              await _loadEventsAndGifts();
+              setState(() {
+                _isLoading = false; // Hide loading indicator
+              });
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () async {
+              await _logout();
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.0),
