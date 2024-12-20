@@ -10,14 +10,14 @@ class UserModel {
   String name;
   String email;
   String mobile;
-  String preferences; // JSON string for user preferences
+  // String preferences; // JSON string for user preferences
 
   UserModel({
     required this.uid,
     required this.name,
     required this.email,
     required this.mobile,
-    this.preferences = '',
+    // this.preferences = '',
   });
 
   // Convert UserModel to a Map for SQLite
@@ -27,7 +27,7 @@ class UserModel {
       'name': name,
       'mobile':mobile,
       'email': email,
-      'preferences': preferences,
+      // 'preferences': preferences,
     };
   }
 
@@ -38,19 +38,19 @@ class UserModel {
       name: map['name'],
       mobile: map['mobile'],
       email: map['email'],
-      preferences: map['preferences'] ?? '',
+      // preferences: map['preferences'] ?? '',
     );
   }
 
-  // Parse preferences JSON string into a Map
-  Map<String, dynamic> getPreferences() {
-    return preferences.isNotEmpty ? jsonDecode(preferences) : {};
-  }
+  // // Parse preferences JSON string into a Map
+  // Map<String, dynamic> getPreferences() {
+  //   return preferences.isNotEmpty ? jsonDecode(preferences) : {};
+  // }
 
-  // Set preferences as a JSON string
-  void setPreferences(Map<String, dynamic> prefs) {
-    preferences = jsonEncode(prefs);
-  }
+  // // Set preferences as a JSON string
+  // void setPreferences(Map<String, dynamic> prefs) {
+  //   preferences = jsonEncode(prefs);
+  // }
 
   // Save user data to Firestore
   static Future<void> saveToFirestore(UserModel user) async {
@@ -60,7 +60,7 @@ class UserModel {
         'name': user.name,
         'email': user.email,
         'mobile':user.mobile,
-        'preferences': user.getPreferences(),
+        // 'preferences': user.getPreferences(),
       });
     } catch (e) {
       print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
@@ -117,7 +117,7 @@ class UserModel {
         email: email,
         mobile: mobile,
       );
-      user.setPreferences(preferences);
+      // user.setPreferences(preferences);
 
       // Save user data to Firestore
       await saveToFirestore(user);
@@ -170,7 +170,7 @@ class UserModel {
         name: data['name'] ?? '',
         email: data['email'] ?? email,
         mobile: data['mobile'] ?? '',
-        preferences: jsonEncode(data['preferences'] ?? {}),
+        // preferences: jsonEncode(data['preferences'] ?? {}),
       );
 
       print('User data retrieved successfully: ${user.toMap()}');

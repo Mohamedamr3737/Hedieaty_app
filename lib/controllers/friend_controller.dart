@@ -2,8 +2,10 @@ import '../models/friend_model.dart';
 import '../models/user_model.dart';
 import 'package:hedieaty_app/models/events_model.dart';
 import 'package:hedieaty_app/models/gifts_model.dart';
-
+import 'package:sqflite/sqlite_api.dart';
+import 'package:hedieaty_app/database/database_helper.dart';
 class FriendController {
+  static final DatabaseHelper _databaseHelper = DatabaseHelper();
   final FriendModel _model = FriendModel();
 
   // Search for a friend by phone number
@@ -18,7 +20,7 @@ class FriendController {
         name: data['name'] ?? '',
         email: data['email'] ?? '',
         mobile: data['mobile'] ?? '',
-        preferences: '',
+        // preferences: '',
       );
     } catch (e) {
       throw Exception('Error searching friend: $e');
@@ -78,5 +80,6 @@ class FriendController {
       throw Exception('Error fetching gifts for event: $e');
     }
   }
+
 
 }

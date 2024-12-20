@@ -86,7 +86,8 @@ class FriendModel {
         'uid': doc.id,
         'name': doc['name'] ?? 'Unknown',
         'mobile': doc['mobile'] ?? 'No Phone',
-        'image':  '', // Optional field for avatar
+        'email': doc['email']?? 'no mail',
+
       }).toList();
     } catch (e) {
       throw Exception('Error fetching friends details: $e');
@@ -115,8 +116,12 @@ class FriendModel {
           'uid': doc.id,
           'name': doc['name'] ?? 'Unknown',
           'mobile': doc['mobile'] ?? '',
+          'email' : doc['email']??'',
           'image':  '',
         };
+
+        friendData.remove('image');
+        await saveUserToLocal(friendData);
 
         // Fetch the count of upcoming events for this friend (only by day)
         final eventsQuery = await _firestore
@@ -145,6 +150,46 @@ class FriendModel {
       throw Exception('Error fetching friends with events: $e');
     }
   }
+
+  // Save user data locally in SQLite after fetching from Firestore
+  Future<void> saveUserToLocal(Map<String, dynamic> userData) async {
+    final db = await _dbHelper.database;
+
+    // Check if the user already exists
+    final existingUser = await db.query(
+      'users',
+      where: 'uid = ?',
+      whereArgs: [userData['uid']],
+      limit: 1,
+    );
+
+    if (existingUser.isEmpty) {
+      // Insert the user if not already present
+      await db.insert(
+        'users',
+        {
+          'uid': userData['uid'],
+          'name': userData['name'] ?? 'Unknown',
+          'mobile': userData['mobile'] ?? 'No Phone',
+          'email': userData['email'] ?? 'No Email',
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace, // Ensures update if entry exists
+      );
+    } else {
+      // Optionally, you can update the user's data if necessary
+      await db.update(
+        'users',
+        {
+          'name': userData['name'] ?? 'Unknown',
+          'mobile': userData['mobile'] ?? 'No Phone',
+          'email': userData['email'] ?? 'No Email',
+        },
+        where: 'uid = ?',
+        whereArgs: [userData['uid']],
+      );
+    }
+  }
+
 
 
 }

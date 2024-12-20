@@ -14,7 +14,7 @@ class Gift {
   String? eventId;
   String? firestoreId;
   String? imageLink;
-
+  String? pledgeddBy;
   Gift({
     this.id,
     required this.name,
@@ -26,6 +26,7 @@ class Gift {
     required this.eventId,
     this.firestoreId,
     this.imageLink,
+    this.pledgeddBy
   });
 
   // Convert Gift object to Map for SQLite
@@ -41,6 +42,7 @@ class Gift {
       'event_id': eventId,
       'firestoreId': firestoreId,
       'imageLink': imageLink,
+      'pledgeddBy': pledgeddBy,
     };
   }
 
@@ -79,6 +81,21 @@ class Gift {
     return newId; // Return the new ID
   }
 
+  static Future<int> insertGiftToLocalOnly(Map<String, dynamic> gift, {int? published}) async {
+    final db = await _databaseHelper.database;
+
+    // Step 1: Insert into SQLite
+    int newId = await db.insert('Gifts', gift);
+
+    // // Step 2: Publish to Firestore if required
+    // if (published != null && published != 0) {
+    //   Gift newGift = fromMap({...gift, 'id': newId}); // Create Gift object with the new ID
+    //   await publishGiftToFirestore(newGift); // Publish to Firestore
+    // }
+
+    return newId; // Return the new ID
+  }
+
 
   /////
   static Future<List<Gift>> fetchGiftsForEventWithSync(String? eventId) async {
@@ -104,6 +121,7 @@ class Gift {
           eventId: data['event_id'],
           firestoreId: doc.id,
           imageLink: data['imageLink'],
+          pledgeddBy: data['pledgeddBy']
         );
       }).toList());
     } catch (e) {
@@ -120,10 +138,10 @@ class Gift {
 
         if (existingGift == null) {
           // Insert new gift into SQLite
-          await Gift.insertGift(firestoreGift.toMap());
+          await Gift.insertGiftToLocalOnly(firestoreGift.toMap());
         } else {
           // Optionally update the local gift if Firestore gift is newer
-          await Gift.updateGift(existingGift.id!, firestoreGift.toMap());
+          await Gift.updateGiftToLocalOnly(existingGift.id!, firestoreGift.toMap());
         }
       }
     }
@@ -164,6 +182,7 @@ class Gift {
           'published': true,
           'event_id': updatedGift.eventId,
           'imageLink': updatedGift.imageLink,
+          'pledgedBy': updatedGift.pledgeddBy,
         });
       } else {
         throw Exception('Cannot update Firestore: Firestore ID is null.');
@@ -175,6 +194,14 @@ class Gift {
     return await db.update('Gifts', updatedGift2, where: 'id = ?', whereArgs: [id]);
   }
 
+  static Future<int> updateGiftToLocalOnly(int id, Map<String, dynamic> gift) async {
+    final db = await _databaseHelper.database;
+
+    final updatedGift2 = Map<String, dynamic>.from(gift);
+    updatedGift2.remove('id');
+    // Update the gift in SQLite
+    return await db.update('Gifts', updatedGift2, where: 'id = ?', whereArgs: [id]);
+  }
 
   // Delete gift from SQLite and Firestore
   static Future<int> deleteGift(int id, {String? firestoreId}) async {
@@ -221,7 +248,7 @@ class Gift {
           'published': true,
           'event_id': gift.eventId,
           'imageLink': gift.imageLink,
-          'pledgedBy':"",
+          'pledgedBy':gift.pledgeddBy??"no user yet",
         });
       } else {
         // Create a new Firestore document and retrieve its ID
@@ -234,6 +261,7 @@ class Gift {
           'published': true,
           'event_id': gift.eventId,
           'imageLink': gift.imageLink,
+          'pledgedBy':gift.pledgeddBy??"no user yet",
         });
 
         gift.firestoreId = docRef.id; // Assign Firestore ID to the Gift object
@@ -284,8 +312,11 @@ class Gift {
       await FirebaseFirestore.instance
           .collection('gifts')
           .doc(firestoreId)
-          .update(
-          {'pledgeddBy': pledgedBy ,'status': newStatus,});
+          .set({
+        'status': newStatus,
+        'pledgedBy': pledgedBy, // Include this field to ensure it is not removed
+      }, SetOptions(merge: true)); // Use merge: true to prevent overwriting other fields
+
     } catch (e) {
       throw Exception('Error updating gift status: $e');
     }

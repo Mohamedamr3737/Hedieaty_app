@@ -211,6 +211,8 @@ class _HomePageState extends State<HomePage> {
   Future<void> _fetchFriends() async {
     try {
       String? currentUserId= await SecureSessionManager.getUserId();
+      print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+      print(currentUserId);
       final fetchedFriends = await _controller.fetchFriendsWithEvents(currentUserId!);
       setState(() {
         friends = fetchedFriends;
@@ -269,10 +271,10 @@ class _HomePageState extends State<HomePage> {
             ),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundImage: friend['image'].isNotEmpty
+                  backgroundImage: false
                       ? NetworkImage(friend['image'])
                       : null,
-                  child: friend['image'].isEmpty
+                  child: true
                       ? Icon(Icons.person, color: Colors.white)
                       : null,
                   backgroundColor: Colors.grey[400],

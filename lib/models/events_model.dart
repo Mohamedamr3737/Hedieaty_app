@@ -61,7 +61,7 @@ class Event {
 
   static Future<int> insertEvent(Map<String, dynamic> event, {int? published}) async {
     final db = await _databaseHelper.database;
-
+    event.remove('id');
     // Step 1: Insert event into SQLite and get the generated ID
     int newId = await db.insert('Events', event);
 
@@ -185,7 +185,6 @@ class Event {
         .then((snapshot) => snapshot.docs.map((doc) {
       final data = doc.data();
       return Event(
-        id: null, // No local ID
         name: data['name'],
         date: DateTime.parse(data['date']),
         location: data['location'],

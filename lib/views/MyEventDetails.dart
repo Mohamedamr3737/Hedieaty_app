@@ -235,6 +235,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                         await _giftController.publishGiftToFirestore(newGift);
 
                       } else {
+                        await _giftController.unpublishGift(newGift);
                         _updateGift(newGift);
                       }
                     }
