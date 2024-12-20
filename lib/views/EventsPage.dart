@@ -101,6 +101,7 @@ class _EventListPageState extends State<EventListPage> {
   }
 
   void _showEventDialog({Event? event}) {
+    final _formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: event?.name ?? '');
     final categoryController = TextEditingController(text: event?.category ?? '');
     final locationController = TextEditingController(text: event?.location ?? '');
@@ -117,29 +118,69 @@ class _EventListPageState extends State<EventListPage> {
             return AlertDialog(
               title: Text(event == null ? 'Add Event' : 'Edit Event'),
               content: SingleChildScrollView(
-                child: Column(
+                child:
+                Form(
+                  key: _formKey,
+                  child:
+                Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(
+                    TextFormField(
                       controller: nameController,
                       decoration: InputDecoration(labelText: 'Event Name'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the event name.';
+                        }
+                        return null;
+                      },
                     ),
-                    TextField(
+                    TextFormField(
                       controller: categoryController,
                       decoration: InputDecoration(labelText: 'Category'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the event category.';
+                        }
+                        return null;
+                      },
                     ),
-                    TextField(
+                    TextFormField(
                       controller: locationController,
                       decoration: InputDecoration(labelText: 'Location'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the event location.';
+                        }
+                        return null;
+                      },
                     ),
-                    TextField(
+                    TextFormField(
                       controller: descriptionController,
                       decoration: InputDecoration(labelText: 'Description'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a description.';
+                        }
+                        return null;
+                      },
                     ),
-                    TextField(
+                    TextFormField(
                       controller: dateController,
                       decoration: InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
                       keyboardType: TextInputType.datetime,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the event date.';
+                        }
+                        // Check if the date is in the correct format
+                        try {
+                          DateTime.parse(value);
+                        } catch (e) {
+                          return 'Please enter a valid date in YYYY-MM-DD format.';
+                        }
+                        return null;
+                      },
                     ),
                     SwitchListTile(
                       title: Text('Publish Event'),
@@ -152,6 +193,7 @@ class _EventListPageState extends State<EventListPage> {
                     ),
                   ],
                 ),
+                ),
               ),
               actions: [
                 TextButton(
@@ -161,25 +203,28 @@ class _EventListPageState extends State<EventListPage> {
                 TextButton(
                   child: Text('Save'),
                   onPressed: () async {
-                    final updatedEvent = Event(
-                      id: event?.id,
-                      name: nameController.text,
-                      category: categoryController.text,
-                      location: locationController.text,
-                      description: descriptionController.text,
-                      date: DateTime.parse(dateController.text),
-                      userId: await SecureSessionManager.getUserId() ?? 'unknown_user',
-                      published: isPublished,
-                      firestoreId: event?.firestoreId,
-                    );
+                    if (_formKey.currentState!.validate()) {
 
-                    if (updatedEvent.id == null) {
-                      _addEvent(updatedEvent, published: updatedEvent.published?1:0);
-                    } else {
-                      _updateEvent(updatedEvent);
-                    }
+            final updatedEvent = Event(
+            id: event?.id,
+            name: nameController.text,
+            category: categoryController.text,
+            location: locationController.text,
+            description: descriptionController.text,
+            date: DateTime.parse(dateController.text),
+            userId: await SecureSessionManager.getUserId() ?? 'unknown_user',
+            published: isPublished,
+            firestoreId: event?.firestoreId,
+            );
 
-                    Navigator.pop(context);
+            if (updatedEvent.id == null) {
+            _addEvent(updatedEvent, published: updatedEvent.published?1:0);
+            } else {
+            _updateEvent(updatedEvent);
+            }
+
+            Navigator.pop(context);
+            }
                   },
                 ),
               ],

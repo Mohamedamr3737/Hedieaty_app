@@ -69,6 +69,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   final ImageHandler imageHandler = ImageHandler(); // Initialize handler
 
   void _showGiftDialog({Gift? gift}) async {
+    final _formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: gift?.name ?? '');
     final descriptionController = TextEditingController(text: gift?.description ?? '');
     final categoryController = TextEditingController(text: gift?.category ?? '');
@@ -126,20 +127,43 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
             return AlertDialog(
               title: Text(gift == null ? 'Add Gift' : 'Edit Gift'),
               content: SingleChildScrollView(
-                child: Column(
+                child: Form(
+                  key: _formKey,
+                  child:
+
+                Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(
+                    TextFormField(
                       controller: nameController,
                       decoration: InputDecoration(labelText: 'Gift Name'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Gift name is required';
+                        }
+                        return null;
+                      },
                     ),
-                    TextField(
+                    TextFormField(
                       controller: descriptionController,
                       decoration: InputDecoration(labelText: 'Description'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Description is required';
+                        }
+                        return null;
+                      },
                     ),
-                    TextField(
+                    TextFormField(
                       controller: categoryController,
                       decoration: InputDecoration(labelText: 'Category'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Category is required';
+                        }
+                        return null;
+                      },
+
                     ),
                     // Dropdown for Gift Status
                     DropdownButtonFormField<String>(
@@ -157,10 +181,19 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                         });
                       },
                     ),
-                    TextField(
+                    TextFormField(
                       controller: priceController,
                       decoration: InputDecoration(labelText: 'Price'),
                       keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Price is required';
+                        }
+                        if (double.tryParse(value) == null) {
+                          return 'Enter a valid price';
+                        }
+                        return null;
+                      },
                     ),
                     SizedBox(height: 16),
                     imageLink != null
@@ -186,6 +219,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                     ),
                   ],
                 ),
+                ),
               ),
               actions: [
                 TextButton(
@@ -195,52 +229,55 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 TextButton(
                   child: Text('Save'),
                   onPressed: () async {
-                    String? finalImageLink = imageLink;
+                    if (_formKey.currentState!.validate()) {
 
-                    if (isPublished &&
-                        (finalImageLink != null && !finalImageLink.startsWith('http'))) {
+                      String? finalImageLink = imageLink;
 
-                      var uploadedImageUrl =
-                      await _imageUploadService.uploadImage(File(finalImageLink));
-                      if (uploadedImageUrl != null) {
-                        finalImageLink = uploadedImageUrl;
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to upload image.')),
-                        );
-                        return;
-                      }
-                    }
+            if (isPublished &&
+            (finalImageLink != null && !finalImageLink.startsWith('http'))) {
 
-                    final newGift = Gift(
-                      id: gift?.id,
-                      name: nameController.text,
-                      description: descriptionController.text,
-                      category: categoryController.text,
-                      price: double.tryParse(priceController.text) ?? 0.0,
-                      status: selectedStatus, // Use the selected dropdown value
-                      published: isPublished,
-                      eventId: widget.event.firestoreId,
-                      firestoreId: gift?.firestoreId,
-                      imageLink: finalImageLink,
-                    );
+            var uploadedImageUrl =
+            await _imageUploadService.uploadImage(File(finalImageLink));
+            if (uploadedImageUrl != null) {
+            finalImageLink = uploadedImageUrl;
+            } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to upload image.')),
+            );
+            return;
+            }
+            }
+
+            final newGift = Gift(
+            id: gift?.id,
+            name: nameController.text,
+            description: descriptionController.text,
+            category: categoryController.text,
+            price: double.tryParse(priceController.text) ?? 0.0,
+            status: selectedStatus, // Use the selected dropdown value
+            published: isPublished,
+            eventId: widget.event.firestoreId,
+            firestoreId: gift?.firestoreId,
+            imageLink: finalImageLink,
+            );
 
 
-                    if (gift == null) {
-                      _addGift(newGift, published: isPublished ? 1 : 0);
-                    } else {
-                      if (isPublished) {
-                        _updateGift(newGift);
-                        await _giftController.publishGiftToFirestore(newGift);
+            if (gift == null) {
+            _addGift(newGift, published: isPublished ? 1 : 0);
+            } else {
+            if (isPublished) {
+            _updateGift(newGift);
+            await _giftController.publishGiftToFirestore(newGift);
 
-                      } else {
-                        await _giftController.unpublishGift(newGift);
-                        _updateGift(newGift);
-                      }
-                    }
+            } else {
+            await _giftController.unpublishGift(newGift);
+            _updateGift(newGift);
+            }
+            }
 
-                    _loadGifts();
-                    Navigator.pop(context);
+            _loadGifts();
+            Navigator.pop(context);
+            }
                   },
                 ),
               ],
@@ -390,7 +427,14 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                   ),
                                 ),
                                 SizedBox(height: 8),
-
+                                Text(
+                                  '${gift.published ? 'Live' : 'Offline'}',
+                                  style: TextStyle(
+                                    color: gift.published ? Colors.green : Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 8,),
                                 // Accept/Reject Buttons for Pledged Gifts
                                 if (gift.status == 'Pledged')
                                   Row(

@@ -3,6 +3,8 @@ import 'package:hedieaty_app/views/MyPledgedGifts.dart';
 import 'package:hedieaty_app/models/gifts_model.dart';
 import 'package:hedieaty_app/models/events_model.dart';
 import 'package:hedieaty_app/controllers/Session_controller.dart';
+import 'package:hedieaty_app/controllers/user_controller.dart';
+import 'package:hedieaty_app/models/user_model.dart';
 class ProfilePage extends StatefulWidget {
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -10,17 +12,33 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   // Dummy user information
-  String _name = "Mohamed Amr";
-  String _email = "mohamedamr@example.com";
+  String _name = "";
+  String _email = "";
   bool _notificationsEnabled = true;
   // Data for events and associated gifts
   List<Map<String, dynamic>> _eventsWithGifts = [];
   bool _isLoading = true;
 
+
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     _loadEventsAndGifts();
+
+  }
+
+  Future<void> _loadUserData() async {
+  String? userId = await SecureSessionManager.getUserId(); // Replace with actual user ID
+  try {
+  UserModel user = await UserController.fetchUser(userId!);
+  setState(() {
+  _name = user.name;
+  _email = user.email;
+  });
+  } catch (e) {
+  print('Error loading user data: $e');
+  }
   }
 
   // Function to fetch events and associated gifts
@@ -72,7 +90,6 @@ class _ProfilePageState extends State<ProfilePage> {
             // Profile Photo and User Information Section
             Center(child: _buildProfilePhoto()),
             SizedBox(height: 16),
-            Center(child: _buildUserInfoSection()),
 
             // Notification Settings
             SizedBox(height: 30),
@@ -102,7 +119,12 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         CircleAvatar(
           radius: 50,
-          backgroundImage: NetworkImage('https://cdn.create.vista.com/api/media/small/133960224/stock-photo-smiling-young-man'), // Replace with user's profile image URL
+          backgroundColor: Colors.blue, // Set a background color
+          child: Icon(
+            Icons.person, // Replace with your desired icon
+            size: 50,     // Adjust the size of the icon
+            color: Colors.white, // Adjust the color of the icon
+          ),
         ),
         SizedBox(height: 10),
         Text(
@@ -117,27 +139,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Build the user info section
-  Widget _buildUserInfoSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(height: 10),
-        ElevatedButton(
-          onPressed: () {
-            _updatePersonalInfo();
-          },
-          child: Text('Edit Personal Information'),
-          style: ElevatedButton.styleFrom(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+
 
   // Build the notification settings section
   Widget _buildNotificationSettings() {

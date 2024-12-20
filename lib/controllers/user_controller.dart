@@ -66,4 +66,13 @@ class UserController {
 
     }
   }
+
+  static Future<UserModel> fetchUser(String userId) async {
+    try {
+      return await UserModel.fetchUserById(userId);
+    } catch (e) {
+      print('Error fetching user data: $e');
+      throw e;
+    }
+  }
 }

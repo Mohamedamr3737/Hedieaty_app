@@ -227,4 +227,16 @@ class UserModel {
     return eventsWithGifts;
   }
 
+  static Future<UserModel> fetchUserById(String userId) async {
+    final db = await DatabaseHelper().database;
+    final List<Map<String, dynamic>> result =
+    await db.query('Users', where: 'uid = ?', whereArgs: [userId]);
+
+    if (result.isNotEmpty) {
+      return UserModel.fromMap(result.first);
+    } else {
+      throw Exception("User not found");
+    }
+  }
+
 }
