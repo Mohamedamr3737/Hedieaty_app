@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../database/database_helper.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:hedieaty_app/controllers/Session_controller.dart';
+import 'package:hedieaty_app/models/events_model.dart';
+import 'package:hedieaty_app/models/gifts_model.dart';
 class UserModel {
 
   String uid; // Firebase UID
@@ -200,33 +203,28 @@ class UserModel {
     }
   }
 
-  // Function to get the current user UID from SQLite
-  static Future<String?> getCurrentUserId() async {
+ static Future<List<Map<String, dynamic>>> fetchEventsAndGiftsForProfile(String userId) async {
+    List<Map<String, dynamic>> eventsWithGifts = [];
+
     try {
-      final db = await DatabaseHelper().database;
+      // Step 1: Fetch all events created by the user
+      List<Event> events = await Event.fetchEvents(userId);
 
-      // Query the Users table to get the current user
-      // Assuming you have a 'current_user' flag or a similar mechanism
-      final List<Map<String, dynamic>> result = await db.query(
-        'Users',
-        where: 'is_logged_in = ?', // Adjust the condition as per your schema
-        whereArgs: [1], // Assuming 1 indicates the currently logged-in user
-        limit: 1,
-      );
+      // Step 2: For each event, fetch its associated gifts
+      for (Event event in events) {
+        List<Gift> gifts = await Gift.fetchGiftsForEventWithSync(event.firestoreId);
 
-      if (result.isNotEmpty) {
-        // Extract and return the UID of the current user
-        return result.first['uid'] as String?;
-      } else {
-        // No user found
-        return null;
+        // Step 3: Combine event and gifts into a single map
+        eventsWithGifts.add({
+          "event": event,
+          "gifts": gifts,
+        });
       }
     } catch (e) {
-      print('Error fetching current user UID: $e');
-      return null;
+      print('Error fetching events and gifts: $e');
     }
+
+    return eventsWithGifts;
   }
-
-
 
 }

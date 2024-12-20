@@ -23,18 +23,4 @@ class ImageHandler {
     return null;
   }
 
-  // Upload image to Firebase Storage and return its URL
-  Future<String?> uploadImageToFirebase(String localImagePath) async {
-    try {
-      final file = File(localImagePath);
-      final fileName = 'uploads/${DateTime.now().millisecondsSinceEpoch}.png';
-      final storageRef = FirebaseStorage.instance.ref().child(fileName);
-
-      await storageRef.putFile(file);
-      return await storageRef.getDownloadURL(); // Return the uploaded image URL
-    } catch (e) {
-      print('Error uploading image to Firebase: $e');
-    }
-    return null;
-  }
 }

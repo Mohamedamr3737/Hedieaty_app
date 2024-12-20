@@ -57,4 +57,13 @@ class UserController {
       throw Exception('Error logging in: $e');
     }
   }
+
+  Future<List<Map<String, dynamic>>> fetchEventsAndGifts(String userId) async {
+    try{
+      return await fetchEventsAndGifts(userId);
+    }catch(e){
+      throw Exception('Error fetching events: $e');
+
+    }
+  }
 }

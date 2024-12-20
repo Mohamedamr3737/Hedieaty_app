@@ -2,7 +2,7 @@ import '../database/database_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'events_model.dart';
 import 'package:collection/collection.dart';
-
+import 'package:intl/intl.dart';
 class Gift {
   int? id;
   String name;
@@ -59,6 +59,7 @@ class Gift {
       eventId: map['event_id'],
       firestoreId: map['firestoreId'],
       imageLink: map['imageLink'],
+      pledgeddBy: map['pledgeddBy']
     );
   }
 
@@ -99,6 +100,7 @@ class Gift {
 
   /////
   static Future<List<Gift>> fetchGiftsForEventWithSync(String? eventId) async {
+    print("pressed");
     // Step 1: Fetch gifts from SQLite
     final localGifts = await Gift.fetchGiftsForEvent(eventId);
 
@@ -111,6 +113,8 @@ class Gift {
           .get()
           .then((snapshot) => snapshot.docs.map((doc) {
         final data = doc.data();
+        print("frommmmmmmmmmmmmmmmmmmmmmmmmmmmmm");
+        print(data);
         return Gift(
           name: data['name'],
           description: data['description'],
@@ -121,7 +125,7 @@ class Gift {
           eventId: data['event_id'],
           firestoreId: doc.id,
           imageLink: data['imageLink'],
-          pledgeddBy: data['pledgeddBy']
+          pledgeddBy: data['pledgedBy']
         );
       }).toList());
     } catch (e) {
@@ -321,5 +325,166 @@ class Gift {
       throw Exception('Error updating gift status: $e');
     }
   }
+
+  static Future<List<Map<String, dynamic>>> fetchMyPledgedIWillBuy(String userId) async {
+    try {
+      // Fetch pledged gifts by the user
+      QuerySnapshot pledgedGiftsSnapshot = await FirebaseFirestore.instance
+          .collection('gifts')
+          .where('pledgedBy', isEqualTo: userId)
+          .get();
+
+      List<Map<String, dynamic>> pledgedGifts = pledgedGiftsSnapshot.docs
+          .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+          .toList();
+
+      if (pledgedGifts.isEmpty) {
+        return [];
+      }
+
+      // Extract event IDs
+      Set<String> eventIds = pledgedGifts.map((gift) => gift['event_id'] as String).toSet();
+
+      // Fetch events
+      QuerySnapshot eventsSnapshot = await FirebaseFirestore.instance
+          .collection('events')
+          .where(FieldPath.documentId, whereIn: eventIds.toList())
+          .get();
+
+      Map<String, dynamic> eventDetails = {
+        for (var doc in eventsSnapshot.docs)
+          doc.id: {
+            'date': (doc.data() as Map<String, dynamic>)['date'] ?? 'Unknown',
+            'user_id': (doc.data() as Map<String, dynamic>)['user_id'] ?? 'Unknown',
+          }
+      };
+
+      // Fetch user details of event creators
+      QuerySnapshot usersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where(FieldPath.documentId,
+          whereIn: eventDetails.values.map((e) => e['user_id']).toSet().toList())
+          .get();
+
+      Map<String, String> userDetails = {
+        for (var doc in usersSnapshot.docs)
+          doc.id: (doc.data() as Map<String, dynamic>)['name'] ?? 'Unknown'
+      };
+
+      // Map gifts to include recipient name and event deadline
+      List<Map<String, dynamic>> allGifts = pledgedGifts.map((gift) {
+        String eventId = gift['event_id'];
+        String recipientId = eventDetails[eventId]?['user_id'] ?? 'Unknown';
+
+        // Format the deadline
+        String deadline = 'Unknown';
+        if (eventDetails[eventId]?['date'] != null &&
+            eventDetails[eventId]['date'].toString().isNotEmpty) {
+          try {
+            DateTime parsedDate = DateTime.parse(eventDetails[eventId]['date']);
+            deadline = DateFormat('yyyy-MM-dd').format(parsedDate);
+          } catch (e) {
+            print('Error parsing date for event ID $eventId: $e');
+          }
+        }
+
+        return {
+          ...gift,
+          'Deadline': deadline, // Include formatted event deadline
+          'RecipientName': userDetails[recipientId] ?? 'Unknown', // Include recipient's name
+        };
+      }).toList();
+
+      return allGifts;
+    } catch (e) {
+      print('Error fetching gifts: $e');
+      return [];
+    }
+  }
+
+
+
+  static Future<List<Map<String, dynamic>>> fetchMyPledgedBoughtToMe(String userId) async {
+    try {
+      // Fetch events created by the user
+      QuerySnapshot eventsSnapshot = await FirebaseFirestore.instance
+          .collection('events')
+          .where('user_id', isEqualTo: userId)
+          .get();
+
+      List<Map<String, dynamic>> events = eventsSnapshot.docs.map((doc) => {
+        'id': doc.id,
+        ...doc.data() as Map<String, dynamic>,
+      }).toList();
+
+      // Extract event IDs and map them with their dates
+      Map<String, dynamic> eventDetails = {
+        for (var event in events)
+          event['id']: {
+            'date': event['date'], // Assuming 'date' is the event deadline
+          }
+      };
+
+      if (eventDetails.isEmpty) {
+        return [];
+      }
+
+      // Fetch gifts associated with the events
+      QuerySnapshot eventGiftsSnapshot = await FirebaseFirestore.instance
+          .collection('gifts')
+          .where('event_id', whereIn: eventDetails.keys.toList())
+          .where('status', whereIn: ['Pledged', 'Purchased'])
+          .get();
+
+      // Extract `pledgedBy` user IDs
+      Set<String> userIds = eventGiftsSnapshot.docs
+          .map((doc) => (doc.data() as Map<String, dynamic>)['pledgedBy'] as String)
+          .toSet();
+
+      // Fetch user details for the `pledgedBy` users
+      QuerySnapshot usersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: userIds.toList())
+          .get();
+
+      Map<String, String> userDetails = {
+        for (var doc in usersSnapshot.docs)
+          doc.id: (doc.data() as Map<String, dynamic>)['name'] ?? 'Unknown'
+      };
+
+      // Map the gifts to include the pledger's name and event deadline
+      List<Map<String, dynamic>> eventGifts = eventGiftsSnapshot.docs.map((doc) {
+        Map<String, dynamic> giftData = doc.data() as Map<String, dynamic>;
+        String eventId = giftData['event_id'];
+        String pledgedById = giftData['pledgedBy'];
+
+        // Format the deadline
+        String deadline = 'Unknown';
+        if (eventDetails[eventId]?['date'] != null &&
+            eventDetails[eventId]['date'].toString().isNotEmpty) {
+          try {
+            DateTime parsedDate = DateTime.parse(eventDetails[eventId]['date']);
+            deadline = DateFormat('yyyy-MM-dd').format(parsedDate);
+          } catch (e) {
+            print('Error parsing date for event ID $eventId: $e');
+          }
+        }
+
+        return {
+          'id': doc.id,
+          ...giftData,
+          'Deadline': deadline, // Include the formatted deadline
+          'PledgedByName': userDetails[pledgedById] ?? 'Unknown', // Add the pledger's name
+        };
+      }).toList();
+
+      return eventGifts;
+    } catch (e) {
+      print('Error fetching gifts: $e');
+      return [];
+    }
+  }
+
+
 
 }

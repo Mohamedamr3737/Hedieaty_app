@@ -28,8 +28,31 @@ class GiftController {
   // Update gift status to 'Pledged'
   Future<void> pledgeGift(String firestoreId, String pledgedBy) async {
     try {
-      print(pledgedBy);
       await Gift.updateGiftStatus(firestoreId, 'Pledged', pledgedBy);
+    } catch (e) {
+      throw Exception('Error pledging gift: $e');
+    }
+  }
+
+  Future<void> UnpledgeGift(String firestoreId) async {
+    try {
+      await Gift.updateGiftStatus(firestoreId, 'Available', '');
+    } catch (e) {
+      throw Exception('Error pledging gift: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> FetchMyPledgedBoughtToMe(String userId) async {
+    try {
+      return await Gift.fetchMyPledgedBoughtToMe(userId);
+    } catch (e) {
+      throw Exception('Error pledging gift: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> FetchMyPledgedIWillBuy(String userId) async {
+    try {
+      return await Gift.fetchMyPledgedIWillBuy(userId);
     } catch (e) {
       throw Exception('Error pledging gift: $e');
     }

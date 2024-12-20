@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../controllers/user_controller.dart';
+import 'package:hedieaty_app/controllers/user_controller.dart';
 
 class SignupPage extends StatelessWidget {
   final _formKey = GlobalKey<FormState>();

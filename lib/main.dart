@@ -1,11 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import './HomePage.dart';
-import './EventsPage.dart';
-import 'package:hedieaty_app/Giftspage.dart';
-import 'package:hedieaty_app/ProfilePage.dart';
+import 'views/HomePage.dart';
+import 'views/EventsPage.dart';
+import 'package:hedieaty_app/views/ProfilePage.dart';
 import 'package:hedieaty_app/NotificationsPage.dart';
-import 'package:hedieaty_app/LoginPage.dart';
+import 'package:hedieaty_app/views/LoginPage.dart';
 
 
 void main() async {
@@ -44,7 +43,6 @@ class _MainScreenState extends State<MainScreen> {
   // List of widgets representing each page
   final List<Widget> _pages = [
     HomePage(),
-    GiftListPage(),
     EventListPage(),
     NotificationsPage(),
     ProfilePage(),
@@ -80,10 +78,6 @@ class _MainScreenState extends State<MainScreen> {
             BottomNavigationBarItem(
               icon: Icon(Icons.home),
               label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.list_alt),
-              label: 'Gift Lists',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.event),

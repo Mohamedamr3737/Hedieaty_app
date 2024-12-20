@@ -89,31 +89,6 @@ class Event {
     return await db.update('Events', event, where: 'id = ?', whereArgs: [id]);
   }
 
-  // static Future<int> deleteEvent(int id, {String? firestoreId}) async {
-  //   final db = await _databaseHelper.database;
-  //
-  //   // Delete from SQLite
-  //   final rowsDeleted = await db.delete(
-  //     'Events',
-  //     where: 'id = ?',
-  //     whereArgs: [id],
-  //   );
-  //
-  //   // Delete from Firestore if `firestoreId` is provided
-  //   if (firestoreId != null) {
-  //     try {
-  //       await FirebaseFirestore.instance
-  //           .collection('events')
-  //           .doc(firestoreId)
-  //           .delete();
-  //     } catch (e) {
-  //       print('Failed to delete event from Firestore: $e');
-  //     }
-  //   }
-  //
-  //   return rowsDeleted;
-  // }
-
 
   static Future<void> publishEventToFirestore(Event event) async {
     try {

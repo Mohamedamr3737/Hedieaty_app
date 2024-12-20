@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hedieaty_app/MyPledgedGifts.dart';
-
+import 'package:hedieaty_app/views/MyPledgedGifts.dart';
+import 'package:hedieaty_app/models/gifts_model.dart';
+import 'package:hedieaty_app/models/events_model.dart';
+import 'package:hedieaty_app/controllers/Session_controller.dart';
 class ProfilePage extends StatefulWidget {
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -11,24 +13,50 @@ class _ProfilePageState extends State<ProfilePage> {
   String _name = "Mohamed Amr";
   String _email = "mohamedamr@example.com";
   bool _notificationsEnabled = true;
+  // Data for events and associated gifts
+  List<Map<String, dynamic>> _eventsWithGifts = [];
+  bool _isLoading = true;
 
-  // Dummy data for created events and gifts
-  final List<Map<String, dynamic>> _createdEvents = [
-    {
-      "event": "Birthday Party",
-      "gifts": [
-        {"name": "Watch", "status": "Available"},
-        {"name": "Shoes", "status": "Pledged"}
-      ]
-    },
-    {
-      "event": "Wedding Anniversary",
-      "gifts": [
-        {"name": "Necklace", "status": "Available"},
-        {"name": "Smartphone", "status": "Delivered"}
-      ]
+  @override
+  void initState() {
+    super.initState();
+    _loadEventsAndGifts();
+  }
+
+  // Function to fetch events and associated gifts
+  Future<void> _loadEventsAndGifts() async {
+    String? userId = await SecureSessionManager.getUserId(); // Replace with the actual user ID
+    List<Map<String, dynamic>> data = await fetchEventsAndGiftsForProfile(userId!);
+    setState(() {
+      _eventsWithGifts = data;
+      _isLoading = false;
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> fetchEventsAndGiftsForProfile(String userId) async {
+    List<Map<String, dynamic>> eventsWithGifts = [];
+
+    try {
+      // Step 1: Fetch all events created by the user
+      List<Event> events = await Event.fetchEvents(userId);
+
+      // Step 2: For each event, fetch its associated gifts
+      for (Event event in events) {
+        List<Gift> gifts = await Gift.fetchGiftsForEventWithSync(event.firestoreId);
+
+        // Step 3: Combine event and gifts into a single map
+        eventsWithGifts.add({
+          "event": event,
+          "gifts": gifts,
+        });
+      }
+    } catch (e) {
+      print('Error fetching events and gifts: $e');
     }
-  ];
+
+    return eventsWithGifts;
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -135,9 +163,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // Build the list of created events and associated gifts
   Widget _buildCreatedEvents() {
+    if (_isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (_eventsWithGifts.isEmpty) {
+      return Center(child: Text("No events or gifts found."));
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: _createdEvents.map((eventData) {
+      children: _eventsWithGifts.map((eventData) {
+        final Event event = eventData["event"];
+        final List<Gift> gifts = eventData["gifts"];
+
         return Card(
           margin: EdgeInsets.symmetric(vertical: 8.0),
           shape: RoundedRectangleBorder(
@@ -146,13 +185,14 @@ class _ProfilePageState extends State<ProfilePage> {
           elevation: 2,
           child: ExpansionTile(
             title: Text(
-              eventData["event"],
+              event.name,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-            children: (eventData["gifts"] as List<Map<String, dynamic>>).map((gift) {
+            subtitle: Text(event.description ?? ""),
+            children: gifts.map((gift) {
               return ListTile(
-                title: Text(gift["name"]),
-                subtitle: Text("Status: ${gift["status"]}"),
+                title: Text(gift.name),
+                subtitle: Text("Status: ${gift.status}"),
               );
             }).toList(),
           ),
@@ -160,7 +200,6 @@ class _ProfilePageState extends State<ProfilePage> {
       }).toList(),
     );
   }
-
   // Link to the "My Pledged Gifts" page
   Widget _buildPledgedGiftsLink() {
     return GestureDetector(

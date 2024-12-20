@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hedieaty_app/models/events_model.dart';
 import 'package:hedieaty_app/controllers/event_controller.dart';
 import 'package:hedieaty_app/controllers/Session_controller.dart';
-import 'package:hedieaty_app/LoginPage.dart';
+import 'package:hedieaty_app/views/LoginPage.dart';
 import 'package:collection/collection.dart'; // For firstWhereOrNull
 import 'package:hedieaty_app/views/MyEventDetails.dart';
 

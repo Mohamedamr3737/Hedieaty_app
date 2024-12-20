@@ -5,7 +5,6 @@ import 'package:hedieaty_app/controllers/gift_controller.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:hedieaty_app/utils/imageHandler.dart';
-import 'package:hedieaty_app/utils/uploadThings.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:hedieaty_app/utils/image_upload_service.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import './controllers/user_controller.dart';
-import 'signUpPage.dart';
+import 'package:hedieaty_app/controllers/user_controller.dart';
+import 'package:hedieaty_app/views/signUpPage.dart';
 
 class LoginPage extends StatefulWidget {
   @override
